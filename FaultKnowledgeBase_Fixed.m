@@ -437,7 +437,7 @@ classdef FaultKnowledgeBase_Fixed < handle
                         fault_info = obj.faultDatabase{i};
                         measures = fault_info.maintenance_measures;
                         break;
-                    elseif isempty(fault_code)
+                    elseif isempty(fault_code) || strcmp(fault_code, '')
                         % 返回该类型的第一个故障
                         fault_info = obj.faultDatabase{i};
                         measures = fault_info.maintenance_measures;
