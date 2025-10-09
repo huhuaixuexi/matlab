@@ -391,8 +391,8 @@ classdef FaultKnowledgeBase < handle
         end
         
         function measure = createMeasure(obj, level, desc, time, tools)
-            % 创建维护措施结构
-            % 输入验证
+            % Create maintenance measure structure
+            % Input validation
             if nargin < 5
                 error('需要提供所有必需参数：level, desc, time, tools');
             end
@@ -413,8 +413,8 @@ classdef FaultKnowledgeBase < handle
         end
         
         function [fault_info, measures] = getFaultInfo(obj, fault_type, fault_code)
-            % 根据故障类型和代码获取故障信息
-            % 输入验证
+            % Get fault information by type and code
+            % Input validation
             if nargin < 2
                 error('需要提供故障类型参数');
             end
@@ -430,7 +430,7 @@ classdef FaultKnowledgeBase < handle
             fault_info = [];
             measures = {};
             
-            % 使用精确匹配而不是contains
+            % Use exact matching instead of contains
             for i = 1:length(obj.faultDatabase)
                 if strcmp(obj.faultDatabase{i}.fault_type, fault_type)
                     if ~isempty(fault_code) && strcmp(obj.faultDatabase{i}.fault_code, fault_code)
@@ -438,7 +438,7 @@ classdef FaultKnowledgeBase < handle
                         measures = fault_info.maintenance_measures;
                         break;
                     elseif isempty(fault_code)
-                        % 返回该类型的第一个故障
+                        % Return first fault of this type
                         fault_info = obj.faultDatabase{i};
                         measures = fault_info.maintenance_measures;
                         break;
@@ -505,8 +505,8 @@ classdef FaultKnowledgeBase < handle
         end
         
         function logMaintenance(obj, fault_code, actual_measure, result, timestamp)
-            % 记录实际维护情况
-            % 输入验证
+            % Log actual maintenance activities
+            % Input validation
             if nargin < 4
                 error('需要提供故障代码、维护措施和结果');
             end
@@ -532,22 +532,24 @@ classdef FaultKnowledgeBase < handle
             
             obj.maintenanceLog{end+1} = log_entry;
             
-            % 生成安全的字段名
+            % Generate safe field name
             field_name = ['fault_' fault_code];
             field_name = regexprep(field_name, '[^a-zA-Z0-9_]', '_');
             
             if ~isfield(obj.statisticsData, field_name)
-                obj.statisticsData.(field_name) = struct(...
+                obj.statisticsData = setfield(obj.statisticsData, field_name, struct(...
                     'count', 0, ...
                     'success_rate', 0, ...
                     'total_time', 0, ...
-                    'last_occurrence', timestamp);
+                    'last_occurrence', timestamp));
             end
             
-            obj.statisticsData.(field_name).count = ...
-                obj.statisticsData.(field_name).count + 1;
-            obj.statisticsData.(field_name).last_occurrence = timestamp;
-                
+            % Update current count
+            current_struct = getfield(obj.statisticsData, field_name);
+            current_struct.count = current_struct.count + 1;
+            current_struct.last_occurrence = timestamp;
+            obj.statisticsData = setfield(obj.statisticsData, field_name, current_struct);
+            
             fprintf('维护记录已保存\n');
         end
         
