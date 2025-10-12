@@ -302,7 +302,7 @@ end
 
 % 格式化维修建议文本
 function advice_text = format_maintenance_advice(maintenance_advice)
-    if isempty(maintenance_advice.measures)
+    if ~isfield(maintenance_advice, 'measures') || isempty(maintenance_advice.measures)
         advice_text = '';
         return;
     end
@@ -315,8 +315,26 @@ function advice_text = format_maintenance_advice(maintenance_advice)
                                       maintenance_advice.priority)];
     advice_text = [advice_text sprintf('维修措施:\n')];
     
-    for i = 1:length(maintenance_advice.measures)
-        measure = maintenance_advice.measures{i};
+    % 获取measures的数量
+    if iscell(maintenance_advice.measures)
+        num_measures = length(maintenance_advice.measures);
+    elseif isstruct(maintenance_advice.measures)
+        num_measures = length(maintenance_advice.measures);
+    else
+        num_measures = 0;
+    end
+    
+    % 遍历所有措施
+    for i = 1:num_measures
+        if iscell(maintenance_advice.measures)
+            % 如果是元胞数组
+            measure = maintenance_advice.measures{i};
+        elseif isstruct(maintenance_advice.measures)
+            % 如果是结构体数组
+            measure = maintenance_advice.measures(i);
+        end
+        
+        % 格式化输出
         advice_text = [advice_text sprintf('  %d. %s (耗时: %s, 工具: %s)\n', ...
                                           measure.step, measure.action, ...
                                           measure.time, measure.tools)];
@@ -617,26 +635,32 @@ for i = 1:total_samples
              set(h_log_text, 'String', log_text);
          end
          
-         % 更新维修建议显示
-         if ~isempty(current_maintenance_advice) && isfield(current_maintenance_advice, 'measures') && ~isempty(current_maintenance_advice.measures)
-             maint_text = sprintf('【当前故障维修建议】\n');
-             maint_text = [maint_text sprintf('故障代码: %s - %s\n', ...
-                                            current_maintenance_advice.fault_code, ...
-                                            current_maintenance_advice.fault_name)];
-             maint_text = [maint_text sprintf('严重程度: %s | 优先级: %d\n\n', ...
-                                            current_maintenance_advice.severity, ...
-                                            current_maintenance_advice.priority)];
-             maint_text = [maint_text sprintf('推荐维修步骤:\n')];
-             
-             for j = 1:min(5, length(current_maintenance_advice.measures))
-                 measure = current_maintenance_advice.measures{j};
-                 maint_text = [maint_text sprintf('%d. %s\n', measure.step, measure.action)];
-                 maint_text = [maint_text sprintf('   耗时: %s | 所需工具: %s\n\n', ...
-                                                measure.time, measure.tools)];
-             end
-             
-             set(h_maintenance_text, 'String', maint_text);
-         end
+        % 更新维修建议显示
+        if ~isempty(current_maintenance_advice) && isfield(current_maintenance_advice, 'measures') && ~isempty(current_maintenance_advice.measures)
+            maint_text = sprintf('【当前故障维修建议】\n');
+            maint_text = [maint_text sprintf('故障代码: %s - %s\n', ...
+                                           current_maintenance_advice.fault_code, ...
+                                           current_maintenance_advice.fault_name)];
+            maint_text = [maint_text sprintf('严重程度: %s | 优先级: %d\n\n', ...
+                                           current_maintenance_advice.severity, ...
+                                           current_maintenance_advice.priority)];
+            maint_text = [maint_text sprintf('推荐维修步骤:\n')];
+            
+            for j = 1:min(5, length(current_maintenance_advice.measures))
+                if iscell(current_maintenance_advice.measures)
+                    % 如果是元胞数组
+                    measure = current_maintenance_advice.measures{j};
+                else
+                    % 如果是结构体数组
+                    measure = current_maintenance_advice.measures(j);
+                end
+                maint_text = [maint_text sprintf('%d. %s\n', measure.step, measure.action)];
+                maint_text = [maint_text sprintf('   耗时: %s | 所需工具: %s\n\n', ...
+                                               measure.time, measure.tools)];
+            end
+            
+            set(h_maintenance_text, 'String', maint_text);
+        end
          
          drawnow;
      end
