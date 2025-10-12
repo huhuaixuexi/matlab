@@ -1013,6 +1013,14 @@ function db = init_maintenance_database()
         'maintenance_measures', measures_302);
     
     % 故障代码303
+        % 创建措施数组
+    measures_303  = [];
+    measures_303 (1) = create_measure(1, '立即检查传感器状态灯', '5分钟', '无');
+    measures_303 (2) = create_measure(2, '检查供电电压24V DC', '10分钟', '万用表');
+    measures_303 (3) = create_measure(3, '紧急执行零点量程校准', '45分钟', '标准气体');
+    measures_303 (4) = create_measure(4, '检查传感器参比电极', '1.5小时', '专用检测仪');
+    measures_303 (5) = create_measure(5, '立即更换传感器', '2小时', '备用传感器');
+
     db.code_303 = struct(...
         'fault_type', '数据偏差型故障', ...
         'fault_code', '303', ...
@@ -1020,15 +1028,17 @@ function db = init_maintenance_database()
         'description', '偏差漂移超出允许范围（±1.5vol%O2）', ...
         'severity', '严重', ...
         'priority', 1, ...
-        'maintenance_measures', {
-            create_measure(1, '立即检查传感器状态灯', '5分钟', '无');
-            create_measure(2, '检查供电电压24V DC', '10分钟', '万用表');
-            create_measure(3, '紧急执行零点量程校准', '45分钟', '标准气体');
-            create_measure(4, '检查传感器参比电极', '1.5小时', '专用检测仪');
-            create_measure(5, '立即更换传感器', '2小时', '备用传感器')
-        });
+        'maintenance_measures', measures_303 );
     
     % 故障代码304
+        % 创建措施数组
+    measures_304  = [];
+    measures_304 (1) = create_measure(1, '检查测量池窗片清洁度', '15分钟', '清洁工具');
+    measures_304 (2) = create_measure(2, '检查光源强度稳定性', '20分钟', '光强测试仪');
+    measures_304 (3) = create_measure(3, '执行量程标定', '40分钟', '量程气体');
+    measures_304 (4) = create_measure(4, '检查检测器响应曲线', '1小时', '测试设备');
+    measures_304 (5) = create_measure(5, '更换检测器组件', '2小时', '备用检测器');
+
     db.code_304 = struct(...
         'fault_type', '数据偏差型故障', ...
         'fault_code', '304', ...
@@ -1036,15 +1046,17 @@ function db = init_maintenance_database()
         'description', '放大漂移超出允许范围的50%', ...
         'severity', '中等', ...
         'priority', 2, ...
-        'maintenance_measures', {
-            create_measure(1, '检查测量池窗片清洁度', '15分钟', '清洁工具');
-            create_measure(2, '检查光源强度稳定性', '20分钟', '光强测试仪');
-            create_measure(3, '执行量程标定', '40分钟', '量程气体');
-            create_measure(4, '检查检测器响应曲线', '1小时', '测试设备');
-            create_measure(5, '更换检测器组件', '2小时', '备用检测器')
-        });
+        'maintenance_measures', measures_304 );
     
     % 故障代码305
+        % 创建措施数组
+    measures_305  = [];
+    measures_305 (1) = create_measure(1, '停止测量检查报警', '5分钟', '无');
+    measures_305 (2) = create_measure(2, '清洁所有光学元件', '30分钟', '光学清洁套装');
+    measures_305 (3) = create_measure(3, '执行完整系统标定', '1小时', '多种标准气体');
+    measures_305 (4) = create_measure(4, '调整光路对准', '1.5小时', '光路调整工具');
+    measures_305 (5) = create_measure(5, '更换光源和检测器', '3小时', '备件');
+
     db.code_305 = struct(...
         'fault_type', '数据偏差型故障', ...
         'fault_code', '305', ...
@@ -1052,15 +1064,17 @@ function db = init_maintenance_database()
         'description', '放大漂移超出允许范围', ...
         'severity', '严重', ...
         'priority', 1, ...
-        'maintenance_measures', {
-            create_measure(1, '停止测量检查报警', '5分钟', '无');
-            create_measure(2, '清洁所有光学元件', '30分钟', '光学清洁套装');
-            create_measure(3, '执行完整系统标定', '1小时', '多种标准气体');
-            create_measure(4, '调整光路对准', '1.5小时', '光路调整工具');
-            create_measure(5, '更换光源和检测器', '3小时', '备件')
-        });
+        'maintenance_measures', measures_305 );
     
     % 故障代码319
+        % 创建措施数组
+    measures_319  = [];
+    measures_319 (1) = create_measure(1, '检查磁场线圈连接', '10分钟', '万用表');
+    measures_319 (2) = create_measure(2, '测量磁力传感器输出', '20分钟', '示波器');
+    measures_319 (3) = create_measure(3, '调节信号调理电路', '30分钟', '调试设备');
+    measures_319 (4) = create_measure(4, '更换磁力传感器', '1小时', '备用传感器');
+    measures_319 (5) = create_measure(5, '更换传感器电路板', '2小时', '备用电路板');
+
     db.code_319 = struct(...
         'fault_type', '数据偏差型故障', ...
         'fault_code', '319', ...
@@ -1068,15 +1082,17 @@ function db = init_maintenance_database()
         'description', '磁力式传感器测量回路信号失去平衡', ...
         'severity', '严重', ...
         'priority', 1, ...
-        'maintenance_measures', {
-           create_measure(1, '检查磁场线圈连接', '10分钟', '万用表');
-           create_measure(2, '测量磁力传感器输出', '20分钟', '示波器');
-           create_measure(3, '调节信号调理电路', '30分钟', '调试设备');
-           create_measure(4, '更换磁力传感器', '1小时', '备用传感器');
-           create_measure(5, '更换传感器电路板', '2小时', '备用电路板')
-        });
+        'maintenance_measures', measures_319 );
 
     % 故障代码320
+        % 创建措施数组
+    measures_320  = [];
+    measures_320 (1) = create_measure(1, '检查放大器供电', '10分钟', '万用表');
+    measures_320 (2) = create_measure(2, '调整放大器零点增益', '25分钟', '示波器');
+    measures_320 (3) = create_measure(3, '更换运放芯片', '45分钟', '备用芯片');
+    measures_320 (4) = create_measure(4, '检查信号链路', '1小时', '信号发生器');
+    measures_320 (5) = create_measure(5, '更换放大器板', '1.5小时', '备用电路板');
+
     db.code_320 = struct(...
         'fault_type', '数据偏差型故障', ...
         'fault_code', '320', ...
@@ -1084,15 +1100,17 @@ function db = init_maintenance_database()
         'description', '信号放大器偏差超出正常范围', ...
         'severity', '中等', ...
         'priority', 2, ...
-        'maintenance_measures', {
-            create_measure(1, '检查放大器供电', '10分钟', '万用表');
-            create_measure(2, '调整放大器零点增益', '25分钟', '示波器');
-            create_measure(3, '更换运放芯片', '45分钟', '备用芯片');
-            create_measure(4, '检查信号链路', '1小时', '信号发生器');
-            create_measure(5, '更换放大器板', '1.5小时', '备用电路板')
-        });
+        'maintenance_measures', measures_320 );
     
     % 故障代码309-311
+        % 创建措施数组
+    measures_309_311  = [];
+    measures_309_311 (1) = create_measure(1, '检查温度传感器', '10分钟', '温度计');
+    measures_309_311 (2) = create_measure(2, '检查加热冷却器', '20分钟', '万用表');
+    measures_309_311 (3) = create_measure(3, '校准PID参数', '40分钟', '调试软件');
+    measures_309_311 (4) = create_measure(4, '更换温度传感器', '1小时', '备用传感器');
+    measures_309_311 (5) = create_measure(5, '更换温控模块', '2小时', '备用模块');
+
     db.code_309_311 = struct(...
         'fault_type', '数据偏差型故障', ...
         'fault_code', '309-311', ...
@@ -1100,17 +1118,19 @@ function db = init_maintenance_database()
         'description', '温度控制超出范围', ...
         'severity', '中等', ...
         'priority', 2, ...
-        'maintenance_measures', {
-            create_measure(1, '检查温度传感器', '10分钟', '温度计');
-            create_measure(2, '检查加热冷却器', '20分钟', '万用表');
-            create_measure(3, '校准PID参数', '40分钟', '调试软件');
-            create_measure(4, '更换温度传感器', '1小时', '备用传感器');
-            create_measure(5, '更换温控模块', '2小时', '备用模块')
-        });
+        'maintenance_measures', measures_309_311 );
     
     % ========== 数据传输中断型故障 ==========
     
     % 故障代码101
+        % 创建措施数组
+    measures_101  = [];
+    measures_101 (1) = create_measure(1, '检查主电源保险丝', '5分钟', '万用表');
+    measures_101 (2) = create_measure(2, '检查24V电源输出', '10分钟', '万用表');
+    measures_101 (3) = create_measure(3, '重启控制器系统', '15分钟', '无');
+    measures_101 (4) = create_measure(4, '检查CPU和内存', '30分钟', '诊断软件');
+    measures_101 (5) = create_measure(5, '更换控制器主板', '2小时', '备用主板');
+
     db.code_101 = struct(...
         'fault_type', '数据传输中断型故障', ...
         'fault_code', '101', ...
@@ -1118,15 +1138,17 @@ function db = init_maintenance_database()
         'description', '主控制器停止工作', ...
         'severity', '紧急', ...
         'priority', 1, ...
-        'maintenance_measures', {
-            create_measure(1, '检查主电源保险丝', '5分钟', '万用表');
-            create_measure(2, '检查24V电源输出', '10分钟', '万用表');
-            create_measure(3, '重启控制器系统', '15分钟', '无');
-            create_measure(4, '检查CPU和内存', '30分钟', '诊断软件');
-            create_measure(5, '更换控制器主板', '2小时', '备用主板')
-        });
+        'maintenance_measures', measures_101 );
     
     % 故障代码116
+        % 创建措施数组
+    measures_116  = [];
+    measures_116 (1) = create_measure(1, '确认安装位置', '5分钟', '无');
+    measures_116 (2) = create_measure(2, '重装到X20/X21槽', '15分钟', '螺丝刀');
+    measures_116 (3) = create_measure(3, '重配通讯参数', '20分钟', '配置软件');
+    measures_116 (4) = create_measure(4, '测试通讯连接', '30分钟', 'Profibus测试仪');
+    measures_116 (5) = create_measure(5, '更换Profibus模块', '1小时', '备用模块');
+
     db.code_116 = struct(...
         'fault_type', '数据传输中断型故障', ...
         'fault_code', '116', ...
@@ -1134,15 +1156,17 @@ function db = init_maintenance_database()
         'description', 'Profibus模块安装位置错误', ...
         'severity', '中等', ...
         'priority', 3, ...
-        'maintenance_measures', {
-            create_measure(1, '确认安装位置', '5分钟', '无');
-            create_measure(2, '重装到X20/X21槽', '15分钟', '螺丝刀');
-            create_measure(3, '重配通讯参数', '20分钟', '配置软件');
-            create_measure(4, '测试通讯连接', '30分钟', 'Profibus测试仪');
-            create_measure(5, '更换Profibus模块', '1小时', '备用模块')
-        });
+        'maintenance_measures', measures_116 );
     
     % 故障代码201-209
+        % 创建措施数组
+    measures_201_209  = [];
+    measures_201_209 (1) = create_measure(1, '检查总线电缆', '10分钟', '无');
+    measures_201_209 (2) = create_measure(2, '检查终端电阻', '15分钟', '万用表');
+    measures_201_209 (3) = create_measure(3, '更换总线电缆', '30分钟', '备用电缆');
+    measures_201_209 (4) = create_measure(4, '检查模块供电', '20分钟', '万用表');
+    measures_201_209 (5) = create_measure(5, '更换通讯模块', '1小时', '备用模块');
+
     db.code_201_209 = struct(...
         'fault_type', '数据传输中断型故障', ...
         'fault_code', '201-209', ...
@@ -1150,15 +1174,17 @@ function db = init_maintenance_database()
         'description', '系统总线通讯中断', ...
         'severity', '严重', ...
         'priority', 1, ...
-        'maintenance_measures', {
-            create_measure(1, '检查总线电缆', '10分钟', '无');
-            create_measure(2, '检查终端电阻', '15分钟', '万用表');
-            create_measure(3, '更换总线电缆', '30分钟', '备用电缆');
-            create_measure(4, '检查模块供电', '20分钟', '万用表');
-            create_measure(5, '更换通讯模块', '1小时', '备用模块')
-        });
+        'maintenance_measures', measures_201_209 );
     
     % 故障代码300
+        % 创建措施数组
+    measures_300  = [];
+    measures_300 (1) = create_measure(1, '检查ADC供电', '10分钟', '万用表');
+    measures_300 (2) = create_measure(2, '检查模拟输入', '15分钟', '示波器');
+    measures_300 (3) = create_measure(3, '重置ADC芯片', '20分钟', '复位工具');
+    measures_300 (4) = create_measure(4, '更换ADC芯片', '1小时', '备用芯片');
+    measures_300 (5) = create_measure(5, '更换采集卡', '1.5小时', '备用采集卡');
+
     db.code_300 = struct(...
         'fault_type', '数据传输中断型故障', ...
         'fault_code', '300', ...
@@ -1166,15 +1192,17 @@ function db = init_maintenance_database()
         'description', 'ADC无新测量值', ...
         'severity', '严重', ...
         'priority', 1, ...
-        'maintenance_measures', {
-            create_measure(1, '检查ADC供电', '10分钟', '万用表');
-            create_measure(2, '检查模拟输入', '15分钟', '示波器');
-            create_measure(3, '重置ADC芯片', '20分钟', '复位工具');
-            create_measure(4, '更换ADC芯片', '1小时', '备用芯片');
-            create_measure(5, '更换采集卡', '1.5小时', '备用采集卡')
-        });
+        'maintenance_measures', measures_300 );
     
     % 故障代码308
+        % 创建措施数组
+    measures_308  = [];
+    measures_308 (1) = create_measure(1, '重启处理程序', '5分钟', '无');
+    measures_308 (2) = create_measure(2, '检查CPU内存', '10分钟', '监控软件');
+    measures_308 (3) = create_measure(3, '清理系统缓存', '15分钟', '清理工具');
+    measures_308 (4) = create_measure(4, '重装固件程序', '45分钟', '固件包');
+    measures_308 (5) = create_measure(5, '更换处理器板', '2小时', '备用板');
+
     db.code_308 = struct(...
         'fault_type', '数据传输中断型故障', ...
         'fault_code', '308', ...
@@ -1182,15 +1210,17 @@ function db = init_maintenance_database()
         'description', '计算过程错误', ...
         'severity', '中等', ...
         'priority', 2, ...
-        'maintenance_measures', {
-            create_measure(1, '重启处理程序', '5分钟', '无');
-            create_measure(2, '检查CPU内存', '10分钟', '监控软件');
-            create_measure(3, '清理系统缓存', '15分钟', '清理工具');
-            create_measure(4, '重装固件程序', '45分钟', '固件包');
-            create_measure(5, '更换处理器板', '2小时', '备用板')
-        });
+        'maintenance_measures', measures_308 );
     
     % 故障代码318
+        % 创建措施数组
+    measures_318  = [];
+    measures_318 (1) = create_measure(1, '检查触发信号', '10分钟', '示波器');
+    measures_318 (2) = create_measure(2, '检查时钟信号', '15分钟', '示波器');
+    measures_318 (3) = create_measure(3, '重配采样参数', '20分钟', '配置软件');
+    measures_318 (4) = create_measure(4, '更换时钟芯片', '45分钟', '备用芯片');
+    measures_318 (5) = create_measure(5, '更换ADC模块', '1.5小时', '备用模块');
+
     db.code_318 = struct(...
         'fault_type', '数据传输中断型故障', ...
         'fault_code', '318', ...
@@ -1198,15 +1228,17 @@ function db = init_maintenance_database()
         'description', 'ADC无新数据', ...
         'severity', '严重', ...
         'priority', 1, ...
-        'maintenance_measures', {
-            create_measure(1, '检查触发信号', '10分钟', '示波器');
-            create_measure(2, '检查时钟信号', '15分钟', '示波器');
-            create_measure(3, '重配采样参数', '20分钟', '配置软件');
-            create_measure(4, '更换时钟芯片', '45分钟', '备用芯片');
-            create_measure(5, '更换ADC模块', '1.5小时', '备用模块')
-        });
+        'maintenance_measures', measures_318 );
     
     % 故障代码332-337
+        % 创建措施数组
+    measures_332_337  = [];
+    measures_332_337 (1) = create_measure(1, '检查I/O板指示灯', '5分钟', '无');
+    measures_332_337 (2) = create_measure(2, '检查I/O配置', '15分钟', '配置软件');
+    measures_332_337 (3) = create_measure(3, '测试I/O通道', '30分钟', '万用表');
+    measures_332_337 (4) = create_measure(4, '初始化I/O板', '20分钟', '初始化工具');
+    measures_332_337 (5) = create_measure(5, '更换I/O板', '1小时', '备用板');
+
     db.code_332_337 = struct(...
         'fault_type', '数据传输中断型故障', ...
         'fault_code', '332-337', ...
@@ -1214,15 +1246,17 @@ function db = init_maintenance_database()
         'description', 'I/O板硬件问题', ...
         'severity', '中等', ...
         'priority', 2, ...
-        'maintenance_measures', {
-            create_measure(1, '检查I/O板指示灯', '5分钟', '无');
-            create_measure(2, '检查I/O配置', '15分钟', '配置软件');
-            create_measure(3, '测试I/O通道', '30分钟', '万用表');
-            create_measure(4, '初始化I/O板', '20分钟', '初始化工具');
-            create_measure(5, '更换I/O板', '1小时', '备用板')
-        });
+        'maintenance_measures', measures_332_337 );
     
     % 故障代码338-339
+        % 创建措施数组
+    measures_338_339  = [];
+    measures_338_339 (1) = create_measure(1, '检查接线端子', '10分钟', '螺丝刀');
+    measures_338_339 (2) = create_measure(2, '测量线路通断', '15分钟', '万用表');
+    measures_338_339 (3) = create_measure(3, '检查屏蔽接地', '20分钟', '接地测试仪');
+    measures_338_339 (4) = create_measure(4, '更换信号电缆', '30分钟', '备用电缆');
+    measures_338_339 (5) = create_measure(5, '重新布线', '2小时', '布线工具');
+
     db.code_338_339 = struct(...
         'fault_type', '数据传输中断型故障', ...
         'fault_code', '338-339', ...
@@ -1230,17 +1264,19 @@ function db = init_maintenance_database()
         'description', '线路断裂或短路', ...
         'severity', '严重', ...
         'priority', 1, ...
-        'maintenance_measures', {
-            create_measure(1, '检查接线端子', '10分钟', '螺丝刀');
-            create_measure(2, '测量线路通断', '15分钟', '万用表');
-            create_measure(3, '检查屏蔽接地', '20分钟', '接地测试仪');
-            create_measure(4, '更换信号电缆', '30分钟', '备用电缆');
-            create_measure(5, '重新布线', '2小时', '布线工具')
-        });
+        'maintenance_measures', measures_338_339 );
     
     % ========== 数据保持型故障 ==========
     
     % 故障代码301
+        % 创建措施数组
+    measures_301  = [];
+    measures_301 (1) = create_measure(1, '确认实际浓度', '5分钟', '便携式分析仪');
+    measures_301 (2) = create_measure(2, '检查量程设置', '10分钟', '配置软件');
+    measures_301 (3) = create_measure(3, '调整信号衰减', '20分钟', '调节工具');
+    measures_301 (4) = create_measure(4, '重选测量量程', '30分钟', '配置软件');
+    measures_301 (5) = create_measure(5, '更换大量程传感器', '2小时', '备用传感器');
+
     db.code_301 = struct(...
         'fault_type', '数据保持型故障', ...
         'fault_code', '301', ...
@@ -1248,15 +1284,17 @@ function db = init_maintenance_database()
         'description', '超出ADC范围', ...
         'severity', '中等', ...
         'priority', 2, ...
-        'maintenance_measures', {
-            create_measure(1, '确认实际浓度', '5分钟', '便携式分析仪');
-            create_measure(2, '检查量程设置', '10分钟', '配置软件');
-            create_measure(3, '调整信号衰减', '20分钟', '调节工具');
-            create_measure(4, '重选测量量程', '30分钟', '配置软件');
-            create_measure(5, '更换大量程传感器', '2小时', '备用传感器')
-        });
+        'maintenance_measures', measures_301 );
     
     % 故障代码344
+        % 创建措施数组
+    measures_344  = [];
+    measures_344 (1) = create_measure(1, '检查工艺异常', '5分钟', '工艺参数表');
+    measures_344 (2) = create_measure(2, '检查空气泄漏', '15分钟', '检漏仪');
+    measures_344 (3) = create_measure(3, '检查传感器饱和', '20分钟', '测试仪');
+    measures_344 (4) = create_measure(4, '切换高量程', '30分钟', '配置软件');
+    measures_344 (5) = create_measure(5, '更换高量程传感器', '2小时', '备用传感器');
+
     db.code_344 = struct(...
         'fault_type', '数据保持型故障', ...
         'fault_code', '344', ...
@@ -1264,15 +1302,17 @@ function db = init_maintenance_database()
         'description', '超过量程130%', ...
         'severity', '严重', ...
         'priority', 1, ...
-        'maintenance_measures', {
-            create_measure(1, '检查工艺异常', '5分钟', '工艺参数表');
-            create_measure(2, '检查空气泄漏', '15分钟', '检漏仪');
-            create_measure(3, '检查传感器饱和', '20分钟', '测试仪');
-            create_measure(4, '切换高量程', '30分钟', '配置软件');
-            create_measure(5, '更换高量程传感器', '2小时', '备用传感器')
-        });
+        'maintenance_measures', measures_344 );
     
     % 故障代码345
+        % 创建措施数组
+    measures_345  = [];
+    measures_345 (1) = create_measure(1, '检查传感器接线', '10分钟', '接线图');
+    measures_345 (2) = create_measure(2, '检查信号电路', '20分钟', '万用表');
+    measures_345 (3) = create_measure(3, '验证零点设置', '30分钟', '零点气体');
+    measures_345 (4) = create_measure(4, '重新标定', '45分钟', '标准气体');
+    measures_345 (5) = create_measure(5, '更换传感器信号板', '2小时', '备件');
+
     db.code_345 = struct(...
         'fault_type', '数据保持型故障', ...
         'fault_code', '345', ...
@@ -1280,17 +1320,19 @@ function db = init_maintenance_database()
         'description', '低于量程-100%', ...
         'severity', '严重', ...
         'priority', 1, ...
-        'maintenance_measures', {
-            create_measure(1, '检查传感器接线', '10分钟', '接线图');
-            create_measure(2, '检查信号电路', '20分钟', '万用表');
-            create_measure(3, '验证零点设置', '30分钟', '零点气体');
-            create_measure(4, '重新标定', '45分钟', '标准气体');
-            create_measure(5, '更换传感器信号板', '2小时', '备件')
-        });
+        'maintenance_measures', measures_345 );
     
     % ========== 数据波动型故障 ==========
     
     % 故障代码312
+        % 创建措施数组
+    measures_312  = [];
+    measures_312 (1) = create_measure(1, '检查压力传感器', '10分钟', '压力表');
+    measures_312 (2) = create_measure(2, '检查压力管路', '15分钟', '检漏仪');
+    measures_312 (3) = create_measure(3, '校准压力传感器', '30分钟', '标准压力源');
+    measures_312 (4) = create_measure(4, '检查补偿算法', '20分钟', '配置软件');
+    measures_312 (5) = create_measure(5, '更换压力传感器', '1小时', '备用传感器');
+
     db.code_312 = struct(...
         'fault_type', '数据波动型故障', ...
         'fault_code', '312', ...
@@ -1298,15 +1340,17 @@ function db = init_maintenance_database()
         'description', '压力测量错误', ...
         'severity', '中等', ...
         'priority', 2, ...
-        'maintenance_measures', {
-            create_measure(1, '检查压力传感器', '10分钟', '压力表');
-            create_measure(2, '检查压力管路', '15分钟', '检漏仪');
-            create_measure(3, '校准压力传感器', '30分钟', '标准压力源');
-            create_measure(4, '检查补偿算法', '20分钟', '配置软件');
-            create_measure(5, '更换压力传感器', '1小时', '备用传感器')
-        });
+        'maintenance_measures', measures_312 );
     
     % 外部因素EXT-01
+        % 创建措施数组
+    measures_EXT_01  = [];
+    measures_EXT_01 (1) = create_measure(1, '检查过滤器压差', '5分钟', '压差表');
+    measures_EXT_01 (2) = create_measure(2, '更换过滤器', '20分钟', '备用滤芯');
+    measures_EXT_01 (3) = create_measure(3, '吹扫采样管路', '30分钟', '压缩空气');
+    measures_EXT_01 (4) = create_measure(4, '检查管路泄漏', '45分钟', '检漏仪');
+    measures_EXT_01 (5) = create_measure(5, '更换采样管路', '2小时', '备用管路');
+
     db.code_EXT_01 = struct(...
         'fault_type', '数据波动型故障', ...
         'fault_code', 'EXT-01', ...
@@ -1314,15 +1358,17 @@ function db = init_maintenance_database()
         'description', '管道或过滤器问题', ...
         'severity', '中等', ...
         'priority', 2, ...
-        'maintenance_measures', {
-            create_measure(1, '检查过滤器压差', '5分钟', '压差表');
-            create_measure(2, '更换过滤器', '20分钟', '备用滤芯');
-            create_measure(3, '吹扫采样管路', '30分钟', '压缩空气');
-            create_measure(4, '检查管路泄漏', '45分钟', '检漏仪');
-            create_measure(5, '更换采样管路', '2小时', '备用管路')
-        });
+        'maintenance_measures', measures_EXT_01 );
     
     % 外部因素EXT-02
+        % 创建措施数组
+    measures_EXT_02  = [];
+    measures_EXT_02 (1) = create_measure(1, '检查管路扭结', '5分钟', '手电筒');
+    measures_EXT_02 (2) = create_measure(2, '检查流量', '10分钟', '流量计');
+    measures_EXT_02 (3) = create_measure(3, '逐段检漏', '30分钟', '检漏仪');
+    measures_EXT_02 (4) = create_measure(4, '紧固接头', '20分钟', '扳手');
+    measures_EXT_02 (5) = create_measure(5, '重装气路', '3小时', '全套管路');
+
     db.code_EXT_02 = struct(...
         'fault_type', '数据波动型故障', ...
         'fault_code', 'EXT-02', ...
@@ -1330,11 +1376,5 @@ function db = init_maintenance_database()
         'description', '气路系统问题', ...
         'severity', '中等', ...
         'priority', 2, ...
-        'maintenance_measures', {
-            create_measure(1, '检查管路扭结', '5分钟', '手电筒');
-            create_measure(2, '检查流量', '10分钟', '流量计');
-            create_measure(3, '逐段检漏', '30分钟', '检漏仪');
-            create_measure(4, '紧固接头', '20分钟', '扳手');
-            create_measure(5, '重装气路', '3小时', '全套管路')
-        });
+        'maintenance_measures', measures_EXT_02 );
 end
