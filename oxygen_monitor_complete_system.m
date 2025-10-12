@@ -270,6 +270,8 @@ for i = 1:total_samples
              % 统计各类报警
              if isKey(stats.fault_counts, fault_code)
                  stats.fault_counts(fault_code) = stats.fault_counts(fault_code) + 1;
+             else
+                 stats.fault_counts(fault_code) = 1;
              end
              
              % 记录报警
@@ -307,6 +309,16 @@ for i = 1:total_samples
          
          % 显示诊断结果
          fprintf('\n%s\n', diagnosis_msg);
+         
+         % 统计定期诊断的故障（非正常状态）
+         if ~strcmp(fault_code, 'NORMAL')
+             stats.total_alarms = stats.total_alarms + 1;
+             if isKey(stats.fault_counts, fault_code)
+                 stats.fault_counts(fault_code) = stats.fault_counts(fault_code) + 1;
+             else
+                 stats.fault_counts(fault_code) = 1;
+             end
+         end
          
          % 显示维修建议
          if config.show_maintenance_advice && ~strcmp(fault_code, 'NORMAL') && isfield(maintenance_advice, 'all_suggestions') && ~isempty(maintenance_advice.all_suggestions)
