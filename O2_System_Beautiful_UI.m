@@ -23,6 +23,7 @@ config.diagnosis_interval = 3600;                   % 诊断间隔(1小时=3600�
 config.simulation_speed = 1500;                      % 模拟速度(1=实时,100=100倍速)
 config.enable_visualization = true;                 % 是否启用实时可视化
 config.save_log = true;                             % 是否保存日志
+config.save_figure = false;                         % 是否保存图形（设为false可避免警告）
 config.show_maintenance_advice = true;              % 是否显示维修建议
 
 % 诊断阈值配置
@@ -745,11 +746,18 @@ if config.save_log
         fprintf('报警数据已保存至: %s\n', excel_file);
     end
     
-    % 保存图形
-    if config.enable_visualization
+    % 保存图形（可选）
+    if config.enable_visualization && config.save_figure
         figure_file = sprintf('O2_Diagnosis_Figure_%s.png', datestr(now, 'yyyymmdd_HHMMSS'));
-        saveas(fig, figure_file);
-        fprintf('监控图表已保存至: %s\n', figure_file);
+        try
+            % 尝试使用 exportgraphics (MATLAB R2020a+)
+            exportgraphics(fig, figure_file, 'Resolution', 300);
+            fprintf('监控图表已保存至: %s\n', figure_file);
+        catch
+            % 如果 exportgraphics 不可用，使用 print
+            print(fig, '-dpng', '-r300', figure_file);
+            fprintf('监控图表已保存至: %s\n', figure_file);
+        end
     end
 end
 
