@@ -1,0 +1,1283 @@
+clear; clc; close all;
+
+%% ========================================
+%% 氧分析仪实时监控与维护建议系统 v2.0
+%% ========================================
+
+fprintf('════════════════════════════════════════\n');
+fprintf('   氧分析仪实时监控与维护建议系统 v2.0\n');
+fprintf('════════════════════════════════════════\n\n');
+
+% 系统参数配置
+config = struct();
+config.data_file = '7_twohour.xlsx';                % 数据文件名
+config.sheet_name = 'Sheet1';                       % 工作表名
+config.start_time = datetime(2025,10,8,0,0,0);     % 起始时间
+config.sample_interval = 1;                         % 采样间隔(秒)
+config.diagnosis_interval = 3600;                   % 诊断间隔(1小时=3600秒)
+config.simulation_speed = 100;                      % 模拟速度(1=实时,100=100倍速)
+config.enable_visualization = true;                 % 是否启用实时可视化
+config.save_log = true;                             % 是否保存日志
+config.enable_maintenance = true;                   % 是否启用维护建议
+
+% 诊断阈值配置
+thresholds = struct();
+thresholds.full_scale = 9.95;                       % 满量程阈值(%)
+thresholds.zero_scale = 0.05;                       % 零位阈值(%)
+thresholds.normal_mean = 5.0;                       % 正常均值(%)
+thresholds.small_offset = 0.5;                      % 小幅偏移阈值(%)
+thresholds.large_offset = 1.5;                      % 大幅偏移阈值(%)
+thresholds.normal_std = 0.1;                        % 正常标准差(%)
+thresholds.high_std = 0.5;                          % 剧烈波动标准差阈值(%)
+thresholds.data_hold_threshold = 0.001;             % 数据保持阈值(%)
+thresholds.data_hold_duration = 300;                % 数据保持持续时间(秒)
+
+% 故障类型编号体系
+fault_types = struct();
+fault_types.full_scale = '001';                     % 满量程输出
+fault_types.zero_scale = '002';                     % 零位输出
+fault_types.data_missing = '003';                   % 数据缺失
+fault_types.data_hold = '004';                      % 数据保持
+fault_types.severe_fluctuation = '005';             % 剧烈波动异常
+fault_types.data_offset = '006';                    % 数据偏移
+
+% 数据偏移子类型
+offset_subtypes = struct();
+offset_subtypes.small_positive = '006.01';          % 小幅正向偏移
+offset_subtypes.small_negative = '006.02';          % 小幅负向偏移
+offset_subtypes.large_positive = '006.03';          % 大幅正向偏移
+offset_subtypes.large_negative = '006.04';          % 大幅负向偏移
+offset_subtypes.severe_positive = '006.05';         % 严重正向偏移
+offset_subtypes.severe_negative = '006.06';         % 严重负向偏移
+
+fprintf('【系统配置】\n');
+fprintf('  数据文件: %s\n', config.data_file);
+fprintf('  起始时间: %s\n', datestr(config.start_time));
+fprintf('  采样间隔: %d秒\n', config.sample_interval);
+fprintf('  诊断周期: %d秒 (%.1f小时)\n', config.diagnosis_interval, config.diagnosis_interval/3600);
+fprintf('  模拟速度: %dx\n', config.simulation_speed);
+if config.enable_maintenance
+    fprintf('  维护建议: 启用\n');
+else
+    fprintf('  维护建议: 禁用\n');
+end
+fprintf('\n');
+
+%% ========================================
+%% 维护建议数据库（内嵌）
+%% ========================================
+
+% 初始化维护建议数据库
+maintenance_database = containers.Map();
+
+% 数据偏差型故障
+maintenance_database('302') = struct(...
+    'fault_type', '数据偏差型故障', ...
+    'fault_code', '302', ...
+    'fault_name', '零点漂移超过允许范围50%', ...
+    'description', '偏差漂移超过了允许范围的一半（±0.75vol%O2）', ...
+    'severity', '中等', ...
+    'priority', 2, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '检查传感器表面污染', 'time', '10分钟', 'tools', '清洁布、酒精');
+        struct('level', 2, 'measure', '检查采样管路冷凝水', 'time', '15分钟', 'tools', '排水工具');
+        struct('level', 3, 'measure', '执行零点校准程序', 'time', '30分钟', 'tools', '标准气体');
+        struct('level', 4, 'measure', '检查传感器老化程度', 'time', '1小时', 'tools', '测试设备');
+        struct('level', 5, 'measure', '更换传感器模块', 'time', '2小时', 'tools', '备用传感器')
+    }});
+
+maintenance_database('303') = struct(...
+    'fault_type', '数据偏差型故障', ...
+    'fault_code', '303', ...
+    'fault_name', '零点漂移超出允许范围', ...
+    'description', '偏差漂移超出允许范围（±1.5vol%O2）', ...
+    'severity', '严重', ...
+    'priority', 1, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '立即检查传感器状态灯', 'time', '5分钟', 'tools', '无');
+        struct('level', 2, 'measure', '检查供电电压24V DC', 'time', '10分钟', 'tools', '万用表');
+        struct('level', 3, 'measure', '紧急执行零点量程校准', 'time', '45分钟', 'tools', '标准气体');
+        struct('level', 4, 'measure', '检查传感器参比电极', 'time', '1.5小时', 'tools', '专用检测仪');
+        struct('level', 5, 'measure', '立即更换传感器', 'time', '2小时', 'tools', '备用传感器')
+    }});
+
+maintenance_database('304') = struct(...
+    'fault_type', '数据偏差型故障', ...
+    'fault_code', '304', ...
+    'fault_name', '灵敏度漂移超出50%', ...
+    'description', '放大漂移超出允许范围的50%', ...
+    'severity', '中等', ...
+    'priority', 2, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '检查测量池窗片清洁度', 'time', '15分钟', 'tools', '清洁工具');
+        struct('level', 2, 'measure', '检查光源强度稳定性', 'time', '20分钟', 'tools', '光强测试仪');
+        struct('level', 3, 'measure', '执行量程标定', 'time', '40分钟', 'tools', '量程气体');
+        struct('level', 4, 'measure', '检查检测器响应曲线', 'time', '1小时', 'tools', '测试设备');
+        struct('level', 5, 'measure', '更换检测器组件', 'time', '2小时', 'tools', '备用检测器')
+    }});
+
+maintenance_database('305') = struct(...
+    'fault_type', '数据偏差型故障', ...
+    'fault_code', '305', ...
+    'fault_name', '灵敏度漂移超出允许范围', ...
+    'description', '放大漂移超出允许范围', ...
+    'severity', '严重', ...
+    'priority', 1, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '停止测量检查报警', 'time', '5分钟', 'tools', '无');
+        struct('level', 2, 'measure', '清洁所有光学元件', 'time', '30分钟', 'tools', '光学清洁套装');
+        struct('level', 3, 'measure', '执行完整系统标定', 'time', '1小时', 'tools', '多种标准气体');
+        struct('level', 4, 'measure', '调整光路对准', 'time', '1.5小时', 'tools', '光路调整工具');
+        struct('level', 5, 'measure', '更换光源和检测器', 'time', '3小时', 'tools', '备件')
+    }});
+
+maintenance_database('319') = struct(...
+    'fault_type', '数据偏差型故障', ...
+    'fault_code', '319', ...
+    'fault_name', '磁力测量回路失衡', ...
+    'description', '磁力式传感器测量回路信号失去平衡', ...
+    'severity', '严重', ...
+    'priority', 1, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '检查磁场线圈连接', 'time', '10分钟', 'tools', '万用表');
+        struct('level', 2, 'measure', '测量磁力传感器输出', 'time', '20分钟', 'tools', '示波器');
+        struct('level', 3, 'measure', '调节信号调理电路', 'time', '30分钟', 'tools', '调试设备');
+        struct('level', 4, 'measure', '更换磁力传感器', 'time', '1小时', 'tools', '备用传感器');
+        struct('level', 5, 'measure', '更换传感器电路板', 'time', '2小时', 'tools', '备用电路板')
+    }});
+
+maintenance_database('320') = struct(...
+    'fault_type', '数据偏差型故障', ...
+    'fault_code', '320', ...
+    'fault_name', '测定放大偏差过高', ...
+    'description', '信号放大器偏差超出正常范围', ...
+    'severity', '中等', ...
+    'priority', 2, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '检查放大器供电', 'time', '10分钟', 'tools', '万用表');
+        struct('level', 2, 'measure', '调整放大器零点增益', 'time', '25分钟', 'tools', '示波器');
+        struct('level', 3, 'measure', '更换运放芯片', 'time', '45分钟', 'tools', '备用芯片');
+        struct('level', 4, 'measure', '检查信号链路', 'time', '1小时', 'tools', '信号发生器');
+        struct('level', 5, 'measure', '更换放大器板', 'time', '1.5小时', 'tools', '备用电路板')
+    }});
+
+maintenance_database('309-311') = struct(...
+    'fault_type', '数据偏差型故障', ...
+    'fault_code', '309，310，311', ...
+    'fault_name', '温度调节器失效', ...
+    'description', '温度控制超出范围', ...
+    'severity', '中等', ...
+    'priority', 2, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '检查温度传感器', 'time', '10分钟', 'tools', '温度计');
+        struct('level', 2, 'measure', '检查加热冷却器', 'time', '20分钟', 'tools', '万用表');
+        struct('level', 3, 'measure', '校准PID参数', 'time', '40分钟', 'tools', '调试软件');
+        struct('level', 4, 'measure', '更换温度传感器', 'time', '1小时', 'tools', '备用传感器');
+        struct('level', 5, 'measure', '更换温控模块', 'time', '2小时', 'tools', '备用模块')
+    }});
+
+% 数据传输中断型故障
+maintenance_database('101') = struct(...
+    'fault_type', '数据传输中断型故障', ...
+    'fault_code', '101', ...
+    'fault_name', '系统控制器关停', ...
+    'description', '主控制器停止工作', ...
+    'severity', '紧急', ...
+    'priority', 1, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '检查主电源保险丝', 'time', '5分钟', 'tools', '万用表');
+        struct('level', 2, 'measure', '检查24V电源输出', 'time', '10分钟', 'tools', '万用表');
+        struct('level', 3, 'measure', '重启控制器系统', 'time', '15分钟', 'tools', '无');
+        struct('level', 4, 'measure', '检查CPU和内存', 'time', '30分钟', 'tools', '诊断软件');
+        struct('level', 5, 'measure', '更换控制器主板', 'time', '2小时', 'tools', '备用主板')
+    }});
+
+maintenance_database('116') = struct(...
+    'fault_type', '数据传输中断型故障', ...
+    'fault_code', '116', ...
+    'fault_name', 'Profibus安装错误', ...
+    'description', 'Profibus模块安装位置错误', ...
+    'severity', '中等', ...
+    'priority', 3, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '确认安装位置', 'time', '5分钟', 'tools', '无');
+        struct('level', 2, 'measure', '重装到X20/X21槽', 'time', '15分钟', 'tools', '螺丝刀');
+        struct('level', 3, 'measure', '重配通讯参数', 'time', '20分钟', 'tools', '配置软件');
+        struct('level', 4, 'measure', '测试通讯连接', 'time', '30分钟', 'tools', 'Profibus测试仪');
+        struct('level', 5, 'measure', '更换Profibus模块', 'time', '1小时', 'tools', '备用模块')
+    }});
+
+maintenance_database('201-209') = struct(...
+    'fault_type', '数据传输中断型故障', ...
+    'fault_code', '201，202，203，204，205，206，207，208，209', ...
+    'fault_name', '系统总线连接中断', ...
+    'description', '系统总线通讯中断', ...
+    'severity', '严重', ...
+    'priority', 1, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '检查总线电缆', 'time', '10分钟', 'tools', '无');
+        struct('level', 2, 'measure', '检查终端电阻', 'time', '15分钟', 'tools', '万用表');
+        struct('level', 3, 'measure', '更换总线电缆', 'time', '30分钟', 'tools', '备用电缆');
+        struct('level', 4, 'measure', '检查模块供电', 'time', '20分钟', 'tools', '万用表');
+        struct('level', 5, 'measure', '更换通讯模块', 'time', '1小时', 'tools', '备用模块')
+    }});
+
+maintenance_database('300') = struct(...
+    'fault_type', '数据传输中断型故障', ...
+    'fault_code', '300', ...
+    'fault_name', '模数转换器无输出', ...
+    'description', 'ADC无新测量值', ...
+    'severity', '严重', ...
+    'priority', 1, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '检查ADC供电', 'time', '10分钟', 'tools', '万用表');
+        struct('level', 2, 'measure', '检查模拟输入', 'time', '15分钟', 'tools', '示波器');
+        struct('level', 3, 'measure', '重置ADC芯片', 'time', '20分钟', 'tools', '复位工具');
+        struct('level', 4, 'measure', '更换ADC芯片', 'time', '1小时', 'tools', '备用芯片');
+        struct('level', 5, 'measure', '更换采集卡', 'time', '1.5小时', 'tools', '备用采集卡')
+    }});
+
+maintenance_database('308') = struct(...
+    'fault_type', '数据传输中断型故障', ...
+    'fault_code', '308', ...
+    'fault_name', '测定值计算错误', ...
+    'description', '计算过程错误', ...
+    'severity', '中等', ...
+    'priority', 2, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '重启处理程序', 'time', '5分钟', 'tools', '无');
+        struct('level', 2, 'measure', '检查CPU内存', 'time', '10分钟', 'tools', '监控软件');
+        struct('level', 3, 'measure', '清理系统缓存', 'time', '15分钟', 'tools', '清理工具');
+        struct('level', 4, 'measure', '重装固件程序', 'time', '45分钟', 'tools', '固件包');
+        struct('level', 5, 'measure', '更换处理器板', 'time', '2小时', 'tools', '备用板')
+    }});
+
+maintenance_database('318') = struct(...
+    'fault_type', '数据传输中断型故障', ...
+    'fault_code', '318', ...
+    'fault_name', 'ADC无新测量', ...
+    'description', 'ADC无新数据', ...
+    'severity', '严重', ...
+    'priority', 1, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '检查触发信号', 'time', '10分钟', 'tools', '示波器');
+        struct('level', 2, 'measure', '检查时钟信号', 'time', '15分钟', 'tools', '示波器');
+        struct('level', 3, 'measure', '重配采样参数', 'time', '20分钟', 'tools', '配置软件');
+        struct('level', 4, 'measure', '更换时钟芯片', 'time', '45分钟', 'tools', '备用芯片');
+        struct('level', 5, 'measure', '更换ADC模块', 'time', '1.5小时', 'tools', '备用模块')
+    }});
+
+maintenance_database('332-337') = struct(...
+    'fault_type', '数据传输中断型故障', ...
+    'fault_code', '332，333，334，335，336，337', ...
+    'fault_name', 'I/O板故障', ...
+    'description', 'I/O板硬件问题', ...
+    'severity', '中等', ...
+    'priority', 2, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '检查I/O板指示灯', 'time', '5分钟', 'tools', '无');
+        struct('level', 2, 'measure', '检查I/O配置', 'time', '15分钟', 'tools', '配置软件');
+        struct('level', 3, 'measure', '测试I/O通道', 'time', '30分钟', 'tools', '万用表');
+        struct('level', 4, 'measure', '初始化I/O板', 'time', '20分钟', 'tools', '初始化工具');
+        struct('level', 5, 'measure', '更换I/O板', 'time', '1小时', 'tools', '备用板')
+    }});
+
+maintenance_database('338-339') = struct(...
+    'fault_type', '数据传输中断型故障', ...
+    'fault_code', '338，339', ...
+    'fault_name', '模拟线路故障', ...
+    'description', '线路断裂或短路', ...
+    'severity', '严重', ...
+    'priority', 1, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '检查接线端子', 'time', '10分钟', 'tools', '螺丝刀');
+        struct('level', 2, 'measure', '测量线路通断', 'time', '15分钟', 'tools', '万用表');
+        struct('level', 3, 'measure', '检查屏蔽接地', 'time', '20分钟', 'tools', '接地测试仪');
+        struct('level', 4, 'measure', '更换信号电缆', 'time', '30分钟', 'tools', '备用电缆');
+        struct('level', 5, 'measure', '重新布线', 'time', '2小时', 'tools', '布线工具')
+    }});
+
+% 数据保持型故障
+maintenance_database('301') = struct(...
+    'fault_type', '数据保持型故障', ...
+    'fault_code', '301', ...
+    'fault_name', '超出ADC阈值', ...
+    'description', '超出ADC范围', ...
+    'severity', '中等', ...
+    'priority', 2, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '确认实际浓度', 'time', '5分钟', 'tools', '便携式分析仪');
+        struct('level', 2, 'measure', '检查量程设置', 'time', '10分钟', 'tools', '配置软件');
+        struct('level', 3, 'measure', '调整信号衰减', 'time', '20分钟', 'tools', '调节工具');
+        struct('level', 4, 'measure', '重选测量量程', 'time', '30分钟', 'tools', '配置软件');
+        struct('level', 5, 'measure', '更换大量程传感器', 'time', '2小时', 'tools', '备用传感器')
+    }});
+
+maintenance_database('344') = struct(...
+    'fault_type', '数据保持型故障', ...
+    'fault_code', '344', ...
+    'fault_name', '超上限130%', ...
+    'description', '超过量程130%', ...
+    'severity', '严重', ...
+    'priority', 1, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '检查工艺异常', 'time', '5分钟', 'tools', '工艺参数表');
+        struct('level', 2, 'measure', '检查空气泄漏', 'time', '15分钟', 'tools', '检漏仪');
+        struct('level', 3, 'measure', '检查传感器饱和', 'time', '20分钟', 'tools', '测试仪');
+        struct('level', 4, 'measure', '切换高量程', 'time', '30分钟', 'tools', '配置软件');
+        struct('level', 5, 'measure', '更换高量程传感器', 'time', '2小时', 'tools', '备用传感器')
+    }});
+
+maintenance_database('345') = struct(...
+    'fault_type', '数据保持型故障', ...
+    'fault_code', '345', ...
+    'fault_name', '低于下限-100%', ...
+    'description', '低于量程-100%', ...
+    'severity', '严重', ...
+    'priority', 1, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '检查传感器接线', 'time', '10分钟', 'tools', '接线图');
+        struct('level', 2, 'measure', '检查信号电路', 'time', '20分钟', 'tools', '万用表');
+        struct('level', 3, 'measure', '验证零点设置', 'time', '30分钟', 'tools', '零点气体');
+        struct('level', 4, 'measure', '重新标定', 'time', '45分钟', 'tools', '标准气体');
+        struct('level', 5, 'measure', '更换传感器信号板', 'time', '2小时', 'tools', '备件')
+    }});
+
+% 数据波动型故障
+maintenance_database('312') = struct(...
+    'fault_type', '数据波动型故障', ...
+    'fault_code', '312', ...
+    'fault_name', '压力修正失效', ...
+    'description', '压力测量错误', ...
+    'severity', '中等', ...
+    'priority', 2, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '检查压力传感器', 'time', '10分钟', 'tools', '压力表');
+        struct('level', 2, 'measure', '检查压力管路', 'time', '15分钟', 'tools', '检漏仪');
+        struct('level', 3, 'measure', '校准压力传感器', 'time', '30分钟', 'tools', '标准压力源');
+        struct('level', 4, 'measure', '检查补偿算法', 'time', '20分钟', 'tools', '配置软件');
+        struct('level', 5, 'measure', '更换压力传感器', 'time', '1小时', 'tools', '备用传感器')
+    }});
+
+maintenance_database('EXT-01') = struct(...
+    'fault_type', '数据波动型故障', ...
+    'fault_code', 'EXT-01', ...
+    'fault_name', '管路污染堵塞', ...
+    'description', '管道或过滤器问题', ...
+    'severity', '中等', ...
+    'priority', 2, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '检查过滤器压差', 'time', '5分钟', 'tools', '压差表');
+        struct('level', 2, 'measure', '更换过滤器', 'time', '20分钟', 'tools', '备用滤芯');
+        struct('level', 3, 'measure', '吹扫采样管路', 'time', '30分钟', 'tools', '压缩空气');
+        struct('level', 4, 'measure', '检查管路泄漏', 'time', '45分钟', 'tools', '检漏仪');
+        struct('level', 5, 'measure', '更换采样管路', 'time', '2小时', 'tools', '备用管路')
+    }});
+
+maintenance_database('EXT-02') = struct(...
+    'fault_type', '数据波动型故障', ...
+    'fault_code', 'EXT-02', ...
+    'fault_name', '气路扭结泄漏', ...
+    'description', '气路系统问题', ...
+    'severity', '中等', ...
+    'priority', 2, ...
+    'maintenance_measures', {{
+        struct('level', 1, 'measure', '检查管路扭结', 'time', '5分钟', 'tools', '手电筒');
+        struct('level', 2, 'measure', '检查流量', 'time', '10分钟', 'tools', '流量计');
+        struct('level', 3, 'measure', '逐段检漏', 'time', '30分钟', 'tools', '检漏仪');
+        struct('level', 4, 'measure', '紧固接头', 'time', '20分钟', 'tools', '扳手');
+        struct('level', 5, 'measure', '重装气路', 'time', '3小时', 'tools', '全套管路')
+    }});
+
+fprintf('【维护数据库】\n');
+fprintf('  ✓ 维护建议数据库初始化完成\n');
+fprintf('  ✓ 包含 %d 个故障类型的维护建议\n\n', maintenance_database.Count);
+
+%% ========================================
+%% 故障映射表
+%% ========================================
+
+% 系统故障代码到仪表故障代码的映射
+fault_mapping = containers.Map();
+fault_mapping('001') = '344';  % 满量程输出 -> 超上限130%
+fault_mapping('002') = '345';  % 零位输出 -> 低于下限-100%
+fault_mapping('003') = '300';  % 数据缺失 -> 模数转换器无输出
+fault_mapping('004') = '301';  % 数据保持 -> 超出ADC阈值
+fault_mapping('005') = '312';  % 剧烈波动 -> 压力修正失效
+fault_mapping('006.01') = '302';  % 小幅正向偏移 -> 零点漂移超过允许范围50%
+fault_mapping('006.02') = '302';  % 小幅负向偏移 -> 零点漂移超过允许范围50%
+fault_mapping('006.03') = '303';  % 大幅正向偏移 -> 零点漂移超出允许范围
+fault_mapping('006.04') = '303';  % 大幅负向偏移 -> 零点漂移超出允许范围
+fault_mapping('006.05') = '305';  % 严重正向偏移 -> 灵敏度漂移超出允许范围
+fault_mapping('006.06') = '305';  % 严重负向偏移 -> 灵敏度漂移超出允许范围
+
+%% ========================================
+%% 加载数据
+%% ========================================
+
+fprintf('【数据加载】\n');
+
+% 检查文件是否存在
+if ~exist(config.data_file, 'file')
+     error('错误：找不到数据文件 %s', config.data_file);
+end
+
+% 读取Excel数据
+try
+     raw_data = readtable(config.data_file, 'Sheet', config.sheet_name);
+     fprintf('  ✓ 成功加载数据文件\n');
+catch ME
+     error('读取数据失败: %s', ME.message);
+end
+
+% 数据预处理
+if width(raw_data) == 2
+     % 两列数据：时间戳和氧浓度
+     time_stamps = raw_data{:,1};
+     oxygen_values = raw_data{:,2};
+elseif width(raw_data) == 1
+     % 单列数据：仅氧浓度，自动生成时间戳
+     oxygen_values = raw_data{:,1};
+     time_stamps = (0:length(oxygen_values)-1)' * config.sample_interval;
+else
+     % 多列数据，假设第二列是氧浓度
+     oxygen_values = raw_data{:,2};
+     time_stamps = (0:length(oxygen_values)-1)' * config.sample_interval;
+end
+
+total_samples = length(oxygen_values);
+total_duration = total_samples * config.sample_interval;
+
+fprintf('  数据点数: %d\n', total_samples);
+fprintf('  数据时长: %.2f小时 (%.2f天)\n', total_duration/3600, total_duration/86400);
+fprintf('  数据范围: [%.4f, %.4f]%%\n\n', min(oxygen_values(~isnan(oxygen_values))), ...
+     max(oxygen_values(~isnan(oxygen_values))));
+
+%% ========================================
+%% 初始化监控系统
+%% ========================================
+
+fprintf('【系统初始化】\n');
+
+% 初始化数据缓冲区
+buffer_size = config.diagnosis_interval;
+data_buffer = NaN(buffer_size, 1);         % 1小时数据缓冲
+buffer_index = 0;                           % 缓冲区索引
+
+% 初始化统计变量
+stats = struct();
+stats.total_alarms = 0;                    % 总报警次数
+stats.fault_counts = containers.Map();     % 各故障类型计数
+stats.diagnosis_count = 0;                 % 诊断次数
+stats.maintenance_recommendations = {};    % 维护建议记录
+stats.diagnosis_results = {};              % 诊断结果记录
+
+% 初始化故障类型计数
+fault_type_names = {'001', '002', '003', '004', '005', '006.01', '006.02', '006.03', '006.04', '006.05', '006.06'};
+for i = 1:length(fault_type_names)
+     stats.fault_counts(fault_type_names{i}) = 0;
+end
+
+% 初始化日志
+log_entries = {};
+alarm_log = {};
+
+% 初始化数据保持检测变量
+data_hold_detector = struct();
+data_hold_detector.last_value = NaN;
+data_hold_detector.hold_start_time = NaN;
+data_hold_detector.hold_duration = 0;
+data_hold_detector.is_holding = false;
+
+% 初始化周期性报警控制
+periodic_alarm_control = struct();
+periodic_alarm_control.last_alarm_time = containers.Map();
+periodic_alarm_control.alarm_interval = 600; % 10分钟 = 600秒
+
+% 初始化可视化
+if config.enable_visualization
+     fig = figure('Name', '氧分析仪实时监控与维护建议系统 v2.0', ...
+                 'Position', [50, 50, 1400, 800], ...
+                 'NumberTitle', 'off');
+     
+     % 实时数据显示窗口
+     ax1 = subplot(2, 2, 1);
+     h_line = plot(NaN, NaN, 'b-', 'LineWidth', 1.5);
+     hold on;
+     h_alarm_points = plot(NaN, NaN, 'ro', 'MarkerSize', 8, 'MarkerFaceColor', 'r');
+     h_current = plot(NaN, NaN, 'go', 'MarkerSize', 10, 'MarkerFaceColor', 'g');
+     yline(thresholds.full_scale, 'r--', '满量程', 'LineWidth', 1.5);
+     yline(thresholds.zero_scale, 'r--', '零位', 'LineWidth', 1.5);
+     yline(thresholds.normal_mean, 'g--', '正常值', 'LineWidth', 1.5);
+     hold off;
+     xlabel('时间 (秒)');
+     ylabel('氧浓度 (%)');
+     title('实时氧浓度监控');
+     grid on;
+     xlim([0, 1000]);
+     ylim([-0.5, 10.5]);
+     legend('实时数据', '异常点', '当前值', 'Location', 'best');
+     
+     % 1小时数据窗口
+     ax2 = subplot(2, 2, 2);
+     h_buffer = plot(NaN, NaN, 'b-', 'LineWidth', 1);
+     xlabel('时间 (小时)');
+     ylabel('氧浓度 (%)');
+     title('1小时数据窗口');
+     grid on;
+     xlim([0, 1]);
+     ylim([-0.5, 10.5]);
+     
+     % 统计信息面板
+     ax3 = subplot(2, 2, 3);
+     axis off;
+     h_stats_text = text(0.05, 0.9, '', 'FontSize', 10, 'FontName', 'FixedWidth');
+     title('实时统计信息');
+     
+     % 诊断结果和维护建议面板
+     ax4 = subplot(2, 2, 4);
+     axis off;
+     h_diagnosis_text = text(0.05, 0.95, '', 'FontSize', 9, 'FontName', 'FixedWidth', ...
+                             'VerticalAlignment', 'top');
+     title('诊断结果与维护建议');
+     
+     drawnow;
+end
+
+fprintf('  ✓ 系统初始化完成\n\n');
+
+%% ========================================
+%% 核心诊断函数
+%% ========================================
+
+% 数据保持检测函数
+function [is_hold, hold_duration] = detect_data_hold(current_value, detector, thresholds, sample_interval)
+     is_hold = false;
+     hold_duration = 0;
+     
+     if isnan(current_value)
+         detector.is_holding = false;
+         detector.hold_duration = 0;
+         return;
+     end
+     
+     if isnan(detector.last_value)
+         detector.last_value = current_value;
+         detector.hold_duration = 0;
+         detector.is_holding = false;
+         return;
+     end
+     
+     % 检查数值变化是否小于阈值
+     value_change = abs(current_value - detector.last_value);
+     
+     if value_change <= thresholds.data_hold_threshold
+         if ~detector.is_holding
+             detector.is_holding = true;
+             detector.hold_start_time = now;
+             detector.hold_duration = sample_interval;
+         else
+             detector.hold_duration = detector.hold_duration + sample_interval;
+         end
+         
+         % 检查是否达到保持持续时间阈值
+         if detector.hold_duration >= thresholds.data_hold_duration
+             is_hold = true;
+             hold_duration = detector.hold_duration;
+         end
+     else
+         detector.is_holding = false;
+         detector.hold_duration = 0;
+     end
+     
+     detector.last_value = current_value;
+end
+
+% 实时异常检测函数
+function [is_alarm, fault_code, alarm_msg] = realtime_detection(value, timestamp, thresholds, fault_types, offset_subtypes, detector, sample_interval)
+     is_alarm = false;
+     fault_code = '';
+     alarm_msg = '';
+     
+     if isnan(value)
+         is_alarm = true;
+         fault_code = fault_types.data_missing;
+         alarm_msg = sprintf('【%s】%s - 数据缺失！检测到NaN值', ...
+                           fault_code, datestr(timestamp, 'yyyy-mm-dd HH:MM:SS'));
+     elseif value >= thresholds.full_scale
+         is_alarm = true;
+         fault_code = fault_types.full_scale;
+         alarm_msg = sprintf('【%s】%s - 满量程输出！当前值: %.4f%%', ...
+                           fault_code, datestr(timestamp, 'yyyy-mm-dd HH:MM:SS'), value);
+     elseif value <= thresholds.zero_scale
+         is_alarm = true;
+         fault_code = fault_types.zero_scale;
+         alarm_msg = sprintf('【%s】%s - 零位输出！当前值: %.4f%%', ...
+                           fault_code, datestr(timestamp, 'yyyy-mm-dd HH:MM:SS'), value);
+     else
+         % 检测数据保持
+         [is_hold, hold_duration] = detect_data_hold(value, detector, thresholds, sample_interval);
+         if is_hold
+             is_alarm = true;
+             fault_code = fault_types.data_hold;
+             alarm_msg = sprintf('【%s】%s - 数据保持！当前值: %.4f%%, 保持时长: %.1f秒', ...
+                               fault_code, datestr(timestamp, 'yyyy-mm-dd HH:MM:SS'), ...
+                               value, hold_duration);
+         end
+     end
+end
+
+% 定期综合诊断函数
+function [fault_code, diagnosis_msg] = periodic_diagnosis(data, timestamp, thresholds, fault_types, offset_subtypes)
+     % 去除NaN进行统计
+     valid_data = data(~isnan(data));
+     
+     if isempty(valid_data)
+         fault_code = fault_types.data_missing;
+         diagnosis_msg = sprintf('【%s】%s - 过去1小时数据全部缺失', ...
+                               fault_code, datestr(timestamp, 'yyyy-mm-dd HH:MM:SS'));
+         return;
+     end
+     
+     % 计算统计特征
+     data_mean = mean(valid_data);
+     data_std = std(valid_data);
+     offset = abs(data_mean - thresholds.normal_mean);
+     
+     % 诊断逻辑
+     if data_std > thresholds.high_std
+         fault_code = fault_types.severe_fluctuation;
+         diagnosis_msg = sprintf('【%s】%s - 剧烈波动异常！标准差: %.4f%% (阈值: %.4f%%)', ...
+                               fault_code, datestr(timestamp, 'yyyy-mm-dd HH:MM:SS'), ...
+                               data_std, thresholds.high_std);
+     elseif data_mean > thresholds.normal_mean
+         if offset <= thresholds.small_offset
+             fault_code = offset_subtypes.small_positive;
+             diagnosis_msg = sprintf('【%s】%s - 小幅正向偏移！均值: %.4f%% (偏移: +%.4f%%)', ...
+                                   fault_code, datestr(timestamp, 'yyyy-mm-dd HH:MM:SS'), ...
+                                   data_mean, offset);
+         elseif offset <= thresholds.large_offset
+             fault_code = offset_subtypes.large_positive;
+             diagnosis_msg = sprintf('【%s】%s - 大幅正向偏移！均值: %.4f%% (偏移: +%.4f%%)', ...
+                                   fault_code, datestr(timestamp, 'yyyy-mm-dd HH:MM:SS'), ...
+                                   data_mean, offset);
+         else
+             fault_code = offset_subtypes.severe_positive;
+             diagnosis_msg = sprintf('【%s】%s - 严重正向偏移！均值: %.4f%% (偏移: +%.4f%%)', ...
+                                   fault_code, datestr(timestamp, 'yyyy-mm-dd HH:MM:SS'), ...
+                                   data_mean, offset);
+         end
+     elseif data_mean < thresholds.normal_mean
+         if offset <= thresholds.small_offset
+             fault_code = offset_subtypes.small_negative;
+             diagnosis_msg = sprintf('【%s】%s - 小幅负向偏移！均值: %.4f%% (偏移: -%.4f%%)', ...
+                                   fault_code, datestr(timestamp, 'yyyy-mm-dd HH:MM:SS'), ...
+                                   data_mean, offset);
+         elseif offset <= thresholds.large_offset
+             fault_code = offset_subtypes.large_negative;
+             diagnosis_msg = sprintf('【%s】%s - 大幅负向偏移！均值: %.4f%% (偏移: -%.4f%%)', ...
+                                   fault_code, datestr(timestamp, 'yyyy-mm-dd HH:MM:SS'), ...
+                                   data_mean, offset);
+         else
+             fault_code = offset_subtypes.severe_negative;
+             diagnosis_msg = sprintf('【%s】%s - 严重负向偏移！均值: %.4f%% (偏移: -%.4f%%)', ...
+                                   fault_code, datestr(timestamp, 'yyyy-mm-dd HH:MM:SS'), ...
+                                   data_mean, offset);
+         end
+     else
+         fault_code = 'NORMAL';
+         diagnosis_msg = sprintf('【正常】%s - 正常工况！均值: %.4f%%, 标准差: %.4f%%', ...
+                               datestr(timestamp, 'yyyy-mm-dd HH:MM:SS'), ...
+                               data_mean, data_std);
+     end
+     
+     % 附加统计信息
+     diagnosis_msg = sprintf('%s\n    数据统计: 有效点数=%d, 最大=%.4f%%, 最小=%.4f%%', ...
+                           diagnosis_msg, length(valid_data), ...
+                           max(valid_data), min(valid_data));
+end
+
+% 周期性报警控制函数
+function should_alarm = check_periodic_alarm(fault_code, current_time, alarm_control)
+     should_alarm = false;
+     
+     % 对于001-004的实时监测类故障，检查周期性报警
+     if strcmp(fault_code, '001') || strcmp(fault_code, '002') || ...
+        strcmp(fault_code, '003') || strcmp(fault_code, '004')
+         
+         if ~isKey(alarm_control.last_alarm_time, fault_code)
+             should_alarm = true;
+             alarm_control.last_alarm_time(fault_code) = current_time;
+         else
+             time_since_last = etime(datevec(current_time), datevec(alarm_control.last_alarm_time(fault_code)));
+             if time_since_last >= alarm_control.alarm_interval
+                 should_alarm = true;
+                 alarm_control.last_alarm_time(fault_code) = current_time;
+             end
+         end
+     else
+         % 其他故障类型维持实时报告
+         should_alarm = true;
+     end
+end
+
+% 获取维护建议函数
+function [maintenance_msg, detailed_info] = getMaintenanceRecommendation(fault_code, maintenance_database, fault_mapping)
+     maintenance_msg = '';
+     detailed_info = struct();
+     
+     if isempty(maintenance_database) || ~isKey(fault_mapping, fault_code)
+         return;
+     end
+     
+     % 获取仪表故障代码
+     instrument_fault_code = fault_mapping(fault_code);
+     
+     if ~isKey(maintenance_database, instrument_fault_code)
+         return;
+     end
+     
+     fault_info = maintenance_database(instrument_fault_code);
+     if ~isempty(fault_info) && ~isempty(fault_info.maintenance_measures)
+         maintenance_msg = sprintf('【维护建议】%s - %s', ...
+                                 fault_info.fault_name, ...
+                                 fault_info.maintenance_measures{1}.measure);
+         
+         % 构建详细信息
+         detailed_info = struct();
+         detailed_info.system_fault_code = fault_code;
+         detailed_info.instrument_fault_code = instrument_fault_code;
+         detailed_info.fault_type = fault_info.fault_type;
+         detailed_info.fault_name = fault_info.fault_name;
+         detailed_info.description = fault_info.description;
+         detailed_info.severity = fault_info.severity;
+         detailed_info.priority = fault_info.priority;
+         detailed_info.maintenance_measures = fault_info.maintenance_measures;
+     end
+end
+
+% 显示详细维护建议函数
+function displayMaintenanceDetails(fault_code, maintenance_database, fault_mapping)
+     if isempty(maintenance_database) || ~isKey(fault_mapping, fault_code)
+         fprintf('未找到故障代码 %s 的维护建议\n', fault_code);
+         return;
+     end
+     
+     % 获取仪表故障代码
+     instrument_fault_code = fault_mapping(fault_code);
+     
+     if ~isKey(maintenance_database, instrument_fault_code)
+         fprintf('未找到仪表故障代码 %s 的维护建议\n', instrument_fault_code);
+         return;
+     end
+     
+     fault_info = maintenance_database(instrument_fault_code);
+     
+     fprintf('\n════════════════════════════════════════\n');
+     fprintf('           故障诊断与维护建议\n');
+     fprintf('════════════════════════════════════════\n');
+     fprintf('系统故障代码: %s\n', fault_code);
+     fprintf('仪表故障代码: %s\n', instrument_fault_code);
+     fprintf('故障类型: %s\n', fault_info.fault_type);
+     fprintf('故障名称: %s\n', fault_info.fault_name);
+     fprintf('故障描述: %s\n', fault_info.description);
+     fprintf('严重程度: %s\n', fault_info.severity);
+     fprintf('优先级: %d\n', fault_info.priority);
+     fprintf('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+     fprintf('维护措施建议:\n\n');
+     
+     if ~isempty(fault_info.maintenance_measures)
+         for i = 1:length(fault_info.maintenance_measures)
+             measure = fault_info.maintenance_measures{i};
+             fprintf('【级别%d】%s\n', measure.level, measure.measure);
+             fprintf('    预计时间: %s\n', measure.time);
+             fprintf('    所需工具: %s\n\n', measure.tools);
+         end
+     else
+         fprintf('暂无维护措施建议\n');
+     end
+     
+     fprintf('════════════════════════════════════════\n\n');
+end
+
+% 生成诊断结果文本函数
+function diagnosis_text = generateDiagnosisText(diagnosis_results)
+     if isempty(diagnosis_results)
+         diagnosis_text = '暂无诊断结果';
+         return;
+     end
+     
+     % 获取最近的诊断结果
+     recent_results = diagnosis_results(max(1, end-2):end);
+     diagnosis_text = '';
+     
+     for i = 1:length(recent_results)
+         result = recent_results{i};
+         diagnosis_text = [diagnosis_text, sprintf('【%s】%s\n', result.system_fault_code, result.fault_name)];
+         diagnosis_text = [diagnosis_text, sprintf('仪表代码: %s\n', result.instrument_fault_code)];
+         diagnosis_text = [diagnosis_text, sprintf('严重程度: %s\n', result.severity)];
+         if ~isempty(result.maintenance_measures)
+             diagnosis_text = [diagnosis_text, sprintf('建议措施: %s\n', result.maintenance_measures{1}.measure)];
+         end
+         diagnosis_text = [diagnosis_text, '━━━━━━━━━━━━━━━━\n'];
+     end
+end
+
+%% ========================================
+%% 主监控循环
+%% ========================================
+
+fprintf('════════════════════════════════════════\n');
+fprintf('         开始实时监控模拟\n');
+fprintf('════════════════════════════════════════\n\n');
+
+% 初始化变量
+sample_count = 0;
+last_diagnosis_time = 0;
+alarm_times = [];
+alarm_values = [];
+maintenance_log = {};
+
+% 主循环
+for i = 1:total_samples
+     sample_count = sample_count + 1;
+     
+     % 获取当前数据
+     current_value = oxygen_values(i);
+     current_time = config.start_time + seconds((i-1) * config.sample_interval);
+     
+     % 更新数据缓冲区
+     buffer_index = mod(sample_count - 1, buffer_size) + 1;
+     data_buffer(buffer_index) = current_value;
+     
+     % ====== 实时异常检测 ======
+     [is_alarm, fault_code, alarm_msg] = realtime_detection(current_value, current_time, thresholds, ...
+                                                           fault_types, offset_subtypes, ...
+                                                           data_hold_detector, config.sample_interval);
+     
+     if is_alarm
+         % 检查是否应该报警（周期性控制）
+         should_alarm = check_periodic_alarm(fault_code, current_time, periodic_alarm_control);
+         
+         if should_alarm
+             stats.total_alarms = stats.total_alarms + 1;
+             
+             % 统计各类报警
+             if isKey(stats.fault_counts, fault_code)
+                 stats.fault_counts(fault_code) = stats.fault_counts(fault_code) + 1;
+             end
+             
+             % 记录报警
+             alarm_log{end+1} = alarm_msg;
+             alarm_times(end+1) = (i-1) * config.sample_interval;
+             alarm_values(end+1) = current_value;
+             
+             % 获取维护建议
+             if config.enable_maintenance
+                 [maintenance_msg, detailed_info] = getMaintenanceRecommendation(fault_code, maintenance_database, fault_mapping);
+                 if ~isempty(maintenance_msg)
+                     maintenance_log{end+1} = maintenance_msg;
+                     stats.maintenance_recommendations{end+1} = struct(...
+                         'fault_code', fault_code, ...
+                         'timestamp', current_time, ...
+                         'recommendation', maintenance_msg);
+                     
+                     % 记录详细诊断结果
+                     if ~isempty(fieldnames(detailed_info))
+                         stats.diagnosis_results{end+1} = detailed_info;
+                     end
+                 end
+             end
+             
+             % 显示报警
+             fprintf('\a'); % 蜂鸣器
+             fprintf('%s\n', alarm_msg);
+             if config.enable_maintenance && ~isempty(maintenance_msg)
+                 fprintf('%s\n', maintenance_msg);
+                 
+                 % 每10次报警显示一次详细维护建议
+                 if mod(stats.total_alarms, 10) == 0
+                     displayMaintenanceDetails(fault_code, maintenance_database, fault_mapping);
+                 end
+             end
+         end
+     end
+     
+     % ====== 定期综合诊断 ======
+     if sample_count >= config.diagnosis_interval && ...
+        mod(sample_count, config.diagnosis_interval) == 0
+         
+         stats.diagnosis_count = stats.diagnosis_count + 1;
+         
+         % 执行诊断
+         [fault_code, diagnosis_msg] = periodic_diagnosis(data_buffer, current_time, thresholds, ...
+                                                         fault_types, offset_subtypes);
+         
+         % 记录诊断
+         log_entries{end+1} = diagnosis_msg;
+         
+         % 获取维护建议
+         if config.enable_maintenance && ~strcmp(fault_code, 'NORMAL')
+             [maintenance_msg, detailed_info] = getMaintenanceRecommendation(fault_code, maintenance_database, fault_mapping);
+             if ~isempty(maintenance_msg)
+                 maintenance_log{end+1} = maintenance_msg;
+                 stats.maintenance_recommendations{end+1} = struct(...
+                     'fault_code', fault_code, ...
+                     'timestamp', current_time, ...
+                     'recommendation', maintenance_msg);
+                 
+                 % 记录详细诊断结果
+                 if ~isempty(fieldnames(detailed_info))
+                     stats.diagnosis_results{end+1} = detailed_info;
+                 end
+             end
+         end
+         
+         % 显示诊断结果
+         fprintf('\n%s\n', diagnosis_msg);
+         if config.enable_maintenance && ~strcmp(fault_code, 'NORMAL') && ~isempty(maintenance_msg)
+             fprintf('%s\n', maintenance_msg);
+         end
+         fprintf('\n');
+     end
+     
+     % ====== 更新可视化 ======
+     if config.enable_visualization && mod(i, 10) == 0  % 每10个点更新一次图形
+         % 更新实时数据图
+         window_size = min(1000, i);
+         window_start = max(1, i - window_size + 1);
+         window_data = oxygen_values(window_start:i);
+         window_time = (window_start-1:i-1) * config.sample_interval;
+         
+         set(h_line, 'XData', window_time, 'YData', window_data);
+         set(h_current, 'XData', window_time(end), 'YData', window_data(end));
+         
+         % 更新异常点
+         if ~isempty(alarm_times)
+             recent_alarms = alarm_times >= window_time(1);
+             set(h_alarm_points, 'XData', alarm_times(recent_alarms), ...
+                               'YData', alarm_values(recent_alarms));
+         end
+         
+         xlim(ax1, [window_time(1), window_time(end)+100]);
+         
+         % 更新1小时窗口
+         buffer_time = (0:buffer_size-1) / 3600;  % 转换为小时
+         set(h_buffer, 'XData', buffer_time, 'YData', data_buffer);
+         
+         % 更新统计信息
+         stats_text = sprintf(['监控时长: %.2f小时\n' ...
+                             '处理样本: %d/%d\n' ...
+                             '━━━━━━━━━━━━━━━━\n' ...
+                             '总报警数: %d\n' ...
+                             '  001-满量程: %d\n' ...
+                             '  002-零位: %d\n' ...
+                             '  003-数据缺失: %d\n' ...
+                             '  004-数据保持: %d\n' ...
+                             '  005-剧烈波动: %d\n' ...
+                             '  006-数据偏移: %d\n' ...
+                             '━━━━━━━━━━━━━━━━\n' ...
+                             '诊断次数: %d\n' ...
+                             '维护建议: %d\n' ...
+                             '当前值: %.4f%%\n' ...
+                             '当前时间: %s'], ...
+                             sample_count/3600, sample_count, total_samples, ...
+                             stats.total_alarms, ...
+                             stats.fault_counts('001'), ...
+                             stats.fault_counts('002'), ...
+                             stats.fault_counts('003'), ...
+                             stats.fault_counts('004'), ...
+                             stats.fault_counts('005'), ...
+                             stats.fault_counts('006.01') + stats.fault_counts('006.02') + ...
+                             stats.fault_counts('006.03') + stats.fault_counts('006.04') + ...
+                             stats.fault_counts('006.05') + stats.fault_counts('006.06'), ...
+                             stats.diagnosis_count, ...
+                             length(stats.maintenance_recommendations), ...
+                             current_value, ...
+                             datestr(current_time, 'HH:MM:SS'));
+         set(h_stats_text, 'String', stats_text);
+         
+         % 更新诊断结果和维护建议显示
+         if config.enable_maintenance && ~isempty(stats.diagnosis_results)
+             diagnosis_text = generateDiagnosisText(stats.diagnosis_results);
+             set(h_diagnosis_text, 'String', diagnosis_text);
+         end
+         
+         drawnow;
+     end
+     
+     % 模拟延时（根据模拟速度调整）
+     if config.simulation_speed < 1000  % 速度太快时不暂停
+         pause(config.sample_interval / config.simulation_speed);
+     end
+     
+     % 每小时显示进度
+     if mod(sample_count, 3600) == 0
+         fprintf('【进度】已处理 %.1f 小时数据 (%.1f%%)\n', ...
+               sample_count/3600, sample_count/total_samples*100);
+     end
+end
+
+%% ========================================
+%% 生成最终报告
+%% ========================================
+
+fprintf('\n════════════════════════════════════════\n');
+fprintf('         监控模拟完成\n');
+fprintf('════════════════════════════════════════\n\n');
+
+fprintf('【监控统计总结】\n');
+fprintf('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+fprintf('监控时长: %.2f小时 (%.2f天)\n', total_duration/3600, total_duration/86400);
+fprintf('处理样本数: %d\n', total_samples);
+fprintf('诊断次数: %d\n', stats.diagnosis_count);
+fprintf('维护建议数: %d\n\n', length(stats.maintenance_recommendations));
+
+fprintf('【故障统计】\n');
+fprintf('总报警次数: %d\n', stats.total_alarms);
+fprintf('  001-满量程输出: %d次 (%.2f%%)\n', stats.fault_counts('001'), ...
+       stats.fault_counts('001')/total_samples*100);
+fprintf('  002-零位输出: %d次 (%.2f%%)\n', stats.fault_counts('002'), ...
+       stats.fault_counts('002')/total_samples*100);
+fprintf('  003-数据缺失: %d次 (%.2f%%)\n', stats.fault_counts('003'), ...
+       stats.fault_counts('003')/total_samples*100);
+fprintf('  004-数据保持: %d次 (%.2f%%)\n', stats.fault_counts('004'), ...
+       stats.fault_counts('004')/total_samples*100);
+fprintf('  005-剧烈波动异常: %d次 (%.2f%%)\n', stats.fault_counts('005'), ...
+       stats.fault_counts('005')/total_samples*100);
+fprintf('  006-数据偏移: %d次 (%.2f%%)\n', ...
+       stats.fault_counts('006.01') + stats.fault_counts('006.02') + ...
+       stats.fault_counts('006.03') + stats.fault_counts('006.04') + ...
+       stats.fault_counts('006.05') + stats.fault_counts('006.06'), ...
+       (stats.fault_counts('006.01') + stats.fault_counts('006.02') + ...
+        stats.fault_counts('006.03') + stats.fault_counts('006.04') + ...
+        stats.fault_counts('006.05') + stats.fault_counts('006.06'))/total_samples*100);
+
+fprintf('    006.01-小幅正向偏移: %d次\n', stats.fault_counts('006.01'));
+fprintf('    006.02-小幅负向偏移: %d次\n', stats.fault_counts('006.02'));
+fprintf('    006.03-大幅正向偏移: %d次\n', stats.fault_counts('006.03'));
+fprintf('    006.04-大幅负向偏移: %d次\n', stats.fault_counts('006.04'));
+fprintf('    006.05-严重正向偏移: %d次\n', stats.fault_counts('006.05'));
+fprintf('    006.06-严重负向偏移: %d次\n', stats.fault_counts('006.06'));
+fprintf('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n');
+
+% 显示维护建议汇总
+if config.enable_maintenance && ~isempty(stats.maintenance_recommendations)
+    fprintf('【维护建议汇总】\n');
+    fprintf('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    
+    % 统计各故障类型的维护建议
+    fault_maintenance_count = containers.Map();
+    for i = 1:length(stats.maintenance_recommendations)
+        fault_code = stats.maintenance_recommendations{i}.fault_code;
+        if isKey(fault_maintenance_count, fault_code)
+            fault_maintenance_count(fault_code) = fault_maintenance_count(fault_code) + 1;
+        else
+            fault_maintenance_count(fault_code) = 1;
+        end
+    end
+    
+    % 显示维护建议统计
+    fault_codes = keys(fault_maintenance_count);
+    for i = 1:length(fault_codes)
+        fault_code = fault_codes{i};
+        count = fault_maintenance_count(fault_code);
+        if isKey(fault_mapping, fault_code)
+            instrument_code = fault_mapping(fault_code);
+            if isKey(maintenance_database, instrument_code)
+                fault_info = maintenance_database(instrument_code);
+                fprintf('【%s】%s: %d次建议\n', fault_code, fault_info.fault_name, count);
+                if ~isempty(fault_info.maintenance_measures)
+                    fprintf('  主要措施: %s\n', fault_info.maintenance_measures{1}.measure);
+                end
+            end
+        end
+    end
+    fprintf('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n');
+end
+
+% 保存报告到文件
+if config.save_log
+     % 生成报告文件名
+     report_filename = sprintf('O2_Monitor_Diagnosis_Report_%s.txt', ...
+                             datestr(now, 'yyyymmdd_HHMMSS'));
+     
+     fid = fopen(report_filename, 'w', 'n', 'UTF-8');
+     
+     fprintf(fid, '════════════════════════════════════════\n');
+     fprintf(fid, '   氧分析仪实时监控与维护建议系统报告 v2.0\n');
+     fprintf(fid, '════════════════════════════════════════\n\n');
+     fprintf(fid, '生成时间: %s\n', datestr(now));
+     fprintf(fid, '数据文件: %s\n', config.data_file);
+     fprintf(fid, '起始时间: %s\n', datestr(config.start_time));
+     fprintf(fid, '监控时长: %.2f小时\n\n', total_duration/3600);
+     
+     fprintf(fid, '【监控统计】\n');
+     fprintf(fid, '处理样本数: %d\n', total_samples);
+     fprintf(fid, '诊断次数: %d\n', stats.diagnosis_count);
+     fprintf(fid, '总报警次数: %d\n', stats.total_alarms);
+     fprintf(fid, '维护建议数: %d\n\n', length(stats.maintenance_recommendations));
+     
+     fprintf(fid, '【故障统计详情】\n');
+     fprintf(fid, '001-满量程输出: %d次\n', stats.fault_counts('001'));
+     fprintf(fid, '002-零位输出: %d次\n', stats.fault_counts('002'));
+     fprintf(fid, '003-数据缺失: %d次\n', stats.fault_counts('003'));
+     fprintf(fid, '004-数据保持: %d次\n', stats.fault_counts('004'));
+     fprintf(fid, '005-剧烈波动异常: %d次\n', stats.fault_counts('005'));
+     fprintf(fid, '006-数据偏移: %d次\n', ...
+             stats.fault_counts('006.01') + stats.fault_counts('006.02') + ...
+             stats.fault_counts('006.03') + stats.fault_counts('006.04') + ...
+             stats.fault_counts('006.05') + stats.fault_counts('006.06'));
+     fprintf(fid, '  006.01-小幅正向偏移: %d次\n', stats.fault_counts('006.01'));
+     fprintf(fid, '  006.02-小幅负向偏移: %d次\n', stats.fault_counts('006.02'));
+     fprintf(fid, '  006.03-大幅正向偏移: %d次\n', stats.fault_counts('006.03'));
+     fprintf(fid, '  006.04-大幅负向偏移: %d次\n', stats.fault_counts('006.04'));
+     fprintf(fid, '  006.05-严重正向偏移: %d次\n', stats.fault_counts('006.05'));
+     fprintf(fid, '  006.06-严重负向偏移: %d次\n', stats.fault_counts('006.06'));
+     fprintf(fid, '\n');
+     
+     % 保存维护建议详情
+     if config.enable_maintenance && ~isempty(stats.maintenance_recommendations)
+         fprintf(fid, '【维护建议详情】\n');
+         fprintf(fid, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+         for i = 1:length(stats.maintenance_recommendations)
+             rec = stats.maintenance_recommendations{i};
+             fprintf(fid, '%s - %s: %s\n', ...
+                     datestr(rec.timestamp, 'yyyy-mm-dd HH:MM:SS'), ...
+                     rec.fault_code, rec.recommendation);
+         end
+         fprintf(fid, '\n');
+     end
+     
+     fprintf(fid, '【实时报警记录】\n');
+     fprintf(fid, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+     for j = 1:length(alarm_log)
+         fprintf(fid, '%s\n', alarm_log{j});
+     end
+     fprintf(fid, '\n');
+     
+     fprintf(fid, '【定期诊断记录】\n');
+     fprintf(fid, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+     for j = 1:length(log_entries)
+         fprintf(fid, '%s\n', log_entries{j});
+     end
+     
+     fclose(fid);
+     fprintf('监控报告已保存至: %s\n', report_filename);
+     
+     % 保存报警数据到Excel
+     if stats.total_alarms > 0
+         alarm_excel = sprintf('O2_Alarms_Diagnosis_%s.xlsx', datestr(now, 'yyyymmdd_HHMMSS'));
+         
+         % 转换时间戳
+         alarm_datetimes = config.start_time + seconds(alarm_times);
+         
+         % 创建表格
+         alarm_table = table(alarm_datetimes', alarm_values', ...
+                           'VariableNames', {'时间', '氧浓度_%'});
+         
+         % 写入Excel
+         writetable(alarm_table, alarm_excel);
+         fprintf('报警数据已保存至: %s\n', alarm_excel);
+     end
+     
+     % 保存诊断结果和维护建议到Excel
+     if config.enable_maintenance && ~isempty(stats.diagnosis_results)
+         diagnosis_excel = sprintf('O2_Diagnosis_Results_%s.xlsx', datestr(now, 'yyyymmdd_HHMMSS'));
+         
+         % 准备诊断结果数据
+         diagnosis_data = cell(length(stats.diagnosis_results), 8);
+         for i = 1:length(stats.diagnosis_results)
+             result = stats.diagnosis_results{i};
+             diagnosis_data{i, 1} = datestr(now); % 时间戳
+             diagnosis_data{i, 2} = result.system_fault_code;
+             diagnosis_data{i, 3} = result.instrument_fault_code;
+             diagnosis_data{i, 4} = result.fault_type;
+             diagnosis_data{i, 5} = result.fault_name;
+             diagnosis_data{i, 6} = result.description;
+             diagnosis_data{i, 7} = result.severity;
+             diagnosis_data{i, 8} = result.priority;
+         end
+         
+         % 创建表格
+         diagnosis_table = table(diagnosis_data(:,1), diagnosis_data(:,2), diagnosis_data(:,3), ...
+                               diagnosis_data(:,4), diagnosis_data(:,5), diagnosis_data(:,6), ...
+                               diagnosis_data(:,7), diagnosis_data(:,8), ...
+                               'VariableNames', {'时间', '系统故障代码', '仪表故障代码', ...
+                               '故障类型', '故障名称', '故障描述', '严重程度', '优先级'});
+         
+         % 写入Excel
+         writetable(diagnosis_table, diagnosis_excel);
+         fprintf('诊断结果已保存至: %s\n', diagnosis_excel);
+         
+         % 保存维护建议详细措施到Excel
+         maintenance_excel = sprintf('O2_Maintenance_Measures_%s.xlsx', datestr(now, 'yyyymmdd_HHMMSS'));
+         
+         % 准备维护措施数据
+         maintenance_data = {};
+         for i = 1:length(stats.diagnosis_results)
+             result = stats.diagnosis_results{i};
+             if ~isempty(result.maintenance_measures)
+                 for j = 1:length(result.maintenance_measures)
+                     measure = result.maintenance_measures{j};
+                     maintenance_data{end+1, 1} = datestr(now);
+                     maintenance_data{end, 2} = result.system_fault_code;
+                     maintenance_data{end, 3} = result.instrument_fault_code;
+                     maintenance_data{end, 4} = result.fault_name;
+                     maintenance_data{end, 5} = measure.level;
+                     maintenance_data{end, 6} = measure.measure;
+                     maintenance_data{end, 7} = measure.time;
+                     maintenance_data{end, 8} = measure.tools;
+                 end
+             end
+         end
+         
+         if ~isempty(maintenance_data)
+             % 创建表格
+             maintenance_table = table(maintenance_data(:,1), maintenance_data(:,2), maintenance_data(:,3), ...
+                                     maintenance_data(:,4), maintenance_data(:,5), maintenance_data(:,6), ...
+                                     maintenance_data(:,7), maintenance_data(:,8), ...
+                                     'VariableNames', {'时间', '系统故障代码', '仪表故障代码', ...
+                                     '故障名称', '维护级别', '维护措施', '预计时间', '所需工具'});
+             
+             % 写入Excel
+             writetable(maintenance_table, maintenance_excel);
+             fprintf('维护措施已保存至: %s\n', maintenance_excel);
+         end
+     end
+end
+
+% 保存最终图形
+if config.enable_visualization
+     fig_filename = sprintf('O2_Monitor_Diagnosis_Final_%s.png', ...
+                          datestr(now, 'yyyymmdd_HHMMSS'));
+     saveas(fig, fig_filename);
+     fprintf('监控图表已保存至: %s\n', fig_filename);
+end
+
+fprintf('\n【系统提示】\n');
+if stats.total_alarms > 10
+     fprintf('⚠ 警告：检测到大量异常报警，建议立即检查设备！\n');
+elseif stats.total_alarms > 0
+     fprintf('⚠ 注意：监控期间出现了%d次异常，请关注设备状态。\n', stats.total_alarms);
+else
+     fprintf('✓ 监控期间设备运行正常，无异常报警。\n');
+end
+
+if config.enable_maintenance && ~isempty(stats.maintenance_recommendations)
+    fprintf('🔧 维护建议：系统已生成%d条维护建议，请参考详细报告。\n', length(stats.maintenance_recommendations));
+end
+
+fprintf('\n【系统功能说明】\n');
+fprintf('✓ 系统故障代码映射到仪表故障代码\n');
+fprintf('✓ 完整的故障类型、名称、描述信息\n');
+fprintf('✓ 从简单到复杂的5级维护建议\n');
+fprintf('✓ 诊断页面右下角显示维护建议\n');
+fprintf('✓ 诊断结果和维护建议Excel导出\n');
+fprintf('✓ 实时故障诊断与维护建议关联\n');
+fprintf('✓ 维护建议统计与汇总\n');
+fprintf('✓ 可视化维护建议面板\n');
+
+fprintf('\n════════════════════════════════════════\n');
+fprintf('         程序执行完成\n');
+fprintf('════════════════════════════════════════\n');
