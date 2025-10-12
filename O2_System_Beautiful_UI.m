@@ -291,14 +291,15 @@ if config.enable_visualization
                           'FontWeight', 'bold', ...
                           'ForegroundColor', colors.primary);
      
+     % 使用listbox替代text，实现可滚动查看
      h_stats_text = uicontrol('Parent', stats_panel, ...
-                             'Style', 'text', ...
+                             'Style', 'listbox', ...
                              'Position', [10 10 stats_panel.Position(3)*figWidth-20 stats_panel.Position(4)*figHeight-40], ...
                              'BackgroundColor', colors.light, ...
                              'ForegroundColor', colors.dark, ...
-                             'FontSize', 10, ...
+                             'FontSize', 9, ...
                              'FontName', 'FixedWidth', ...
-                             'HorizontalAlignment', 'left');
+                             'String', {'系统初始化中...'});
      
      % === 右下诊断日志 ===
      log_panel = uipanel('Parent', main_panel, ...
@@ -370,6 +371,7 @@ alarm_times = [];
 alarm_values = [];
 current_maintenance_advice = struct();
 current_maintenance_advice.all_suggestions = {};
+stats_history = {};  % 用于保存历史统计信息
 
 % 主循环
 for i = 1:total_samples
@@ -501,31 +503,77 @@ for i = 1:total_samples
              end
          end
          
-         % 更新统计信息（格式化）
+         % 更新统计信息（格式化为列表）
          stats_lines = {};
+         stats_lines{end+1} = '【实时监控统计】';
+         stats_lines{end+1} = '═══════════════════════════════════════════';
          stats_lines{end+1} = sprintf('监控时长: %.2f 小时', sample_count/3600);
          stats_lines{end+1} = sprintf('处理进度: %d/%d (%.1f%%)', sample_count, total_samples, sample_count/total_samples*100);
-         stats_lines{end+1} = '━━━━━━━━━━━━━━━━━━━━━━━━━━━';
-         stats_lines{end+1} = sprintf('总报警数: %d', stats.total_alarms);
-         stats_lines{end+1} = sprintf('  001-满量程: %d', iif(isKey(stats.fault_counts,'001'), stats.fault_counts('001'), 0));
-         stats_lines{end+1} = sprintf('  002-零位: %d', iif(isKey(stats.fault_counts,'002'), stats.fault_counts('002'), 0));
-         stats_lines{end+1} = sprintf('  003-数据缺失: %d', iif(isKey(stats.fault_counts,'003'), stats.fault_counts('003'), 0));
-         stats_lines{end+1} = sprintf('  004-数据保持: %d', iif(isKey(stats.fault_counts,'004'), stats.fault_counts('004'), 0));
-         stats_lines{end+1} = sprintf('  005-剧烈波动: %d', iif(isKey(stats.fault_counts,'005'), stats.fault_counts('005'), 0));
-         stats_lines{end+1} = sprintf('  006-数据偏移: %d', offset_total);
-         stats_lines{end+1} = '━━━━━━━━━━━━━━━━━━━━━━━━━━━';
-         stats_lines{end+1} = sprintf('诊断次数: %d', stats.diagnosis_count);
+         stats_lines{end+1} = sprintf('当前时间: %s', datestr(current_time, 'yyyy-mm-dd HH:MM:SS'));
          stats_lines{end+1} = sprintf('当前值: %.4f%%', current_value);
-         stats_lines{end+1} = sprintf('时间: %s', datestr(current_time, 'HH:MM:SS'));
+         stats_lines{end+1} = '';
+         stats_lines{end+1} = '【故障统计汇总】';
+         stats_lines{end+1} = '───────────────────────────────────────────';
+         stats_lines{end+1} = sprintf('总报警次数: %d', stats.total_alarms);
+         stats_lines{end+1} = sprintf('诊断次数: %d', stats.diagnosis_count);
+         stats_lines{end+1} = '';
+         stats_lines{end+1} = '【各类故障详情】';
+         stats_lines{end+1} = sprintf('001-满量程输出: %d 次', iif(isKey(stats.fault_counts,'001'), stats.fault_counts('001'), 0));
+         stats_lines{end+1} = sprintf('002-零位输出: %d 次', iif(isKey(stats.fault_counts,'002'), stats.fault_counts('002'), 0));
+         stats_lines{end+1} = sprintf('003-数据缺失: %d 次', iif(isKey(stats.fault_counts,'003'), stats.fault_counts('003'), 0));
+         stats_lines{end+1} = sprintf('004-数据保持: %d 次', iif(isKey(stats.fault_counts,'004'), stats.fault_counts('004'), 0));
+         stats_lines{end+1} = sprintf('005-剧烈波动: %d 次', iif(isKey(stats.fault_counts,'005'), stats.fault_counts('005'), 0));
+         stats_lines{end+1} = sprintf('006-数据偏移: %d 次 (总计)', offset_total);
          
-         stats_text = strjoin(stats_lines, '\n');
-         set(h_stats_text, 'String', stats_text);
+         % 显示006的详细分类
+         for k = 1:length(offset_codes)
+             code = offset_codes{k};
+             if isKey(stats.fault_counts, code) && stats.fault_counts(code) > 0
+                 switch code
+                     case '006.01', sub_name = '小幅正向偏移';
+                     case '006.02', sub_name = '小幅负向偏移';
+                     case '006.03', sub_name = '大幅正向偏移';
+                     case '006.04', sub_name = '大幅负向偏移';
+                     case '006.05', sub_name = '严重正向偏移';
+                     case '006.06', sub_name = '严重负向偏移';
+                 end
+                 stats_lines{end+1} = sprintf('  └─ %s-%s: %d 次', code, sub_name, stats.fault_counts(code));
+             end
+         end
          
-         % 更新日志显示（使用listbox）
+         % 添加数据质量统计
+         stats_lines{end+1} = '';
+         stats_lines{end+1} = '【数据质量统计】';
+         stats_lines{end+1} = '───────────────────────────────────────────';
+         valid_count = sum(~isnan(oxygen_values(1:i)));
+         stats_lines{end+1} = sprintf('有效数据点: %d (%.1f%%)', valid_count, valid_count/i*100);
+         stats_lines{end+1} = sprintf('缺失数据点: %d (%.1f%%)', i-valid_count, (i-valid_count)/i*100);
+         
+         % 计算最近一小时的统计
+         if sample_count >= 3600
+             recent_data = oxygen_values(max(1,i-3599):i);
+             recent_valid = recent_data(~isnan(recent_data));
+             if ~isempty(recent_valid)
+                 stats_lines{end+1} = '';
+                 stats_lines{end+1} = '【最近一小时统计】';
+                 stats_lines{end+1} = '───────────────────────────────────────────';
+                 stats_lines{end+1} = sprintf('平均值: %.4f%%', mean(recent_valid));
+                 stats_lines{end+1} = sprintf('标准差: %.4f%%', std(recent_valid));
+                 stats_lines{end+1} = sprintf('最大值: %.4f%%', max(recent_valid));
+                 stats_lines{end+1} = sprintf('最小值: %.4f%%', min(recent_valid));
+             end
+         end
+         
+         stats_lines{end+1} = '═══════════════════════════════════════════';
+         
+         % 更新listbox，自动滚动到底部
+         set(h_stats_text, 'String', stats_lines, 'Value', length(stats_lines));
+         
+         % 更新日志显示（使用listbox显示所有日志）
          all_logs = [alarm_log, log_entries];
          if ~isempty(all_logs)
-             recent_logs = all_logs(max(1, end-9):end);
-             set(h_log_text, 'String', recent_logs, 'Value', length(recent_logs));
+             % 显示所有日志，并自动滚动到最新
+             set(h_log_text, 'String', all_logs, 'Value', length(all_logs));
          end
          
          % 更新维修建议显示（格式化为listbox）
