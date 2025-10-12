@@ -723,12 +723,19 @@ function maintenance_advice = get_maintenance_advice(fault_code, fault_mapping, 
     % 获取可能的维修故障代码
     possible_codes = fault_mapping(fault_code);
     
+    % 调试信息
+    fprintf('\n调试：get_maintenance_advice - 故障代码: %s\n', fault_code);
+    fprintf('调试：可能的维修代码: %s\n', strjoin(possible_codes, ', '));
+    
     % 收集所有匹配的维修建议
     for i = 1:length(possible_codes)
         maint_code = possible_codes{i};
         field_name = ['code_' strrep(maint_code, '-', '_')];
         
+        fprintf('调试：检查数据库字段: %s', field_name);
+        
         if isfield(maintenance_db, field_name)
+            fprintf(' - 找到!\n');
             maint_info = maintenance_db.(field_name);
             
             % 创建单个建议结构
@@ -742,8 +749,14 @@ function maintenance_advice = get_maintenance_advice(fault_code, fault_mapping, 
             
             % 添加到建议列表
             maintenance_advice.all_suggestions{end+1} = single_advice;
+            
+            fprintf('      措施数量: %d, 类型: %s\n', length(single_advice.measures), class(single_advice.measures));
+        else
+            fprintf(' - 未找到!\n');
         end
     end
+    
+    fprintf('调试：收集到的建议总数: %d\n', length(maintenance_advice.all_suggestions))
     
     % 按优先级排序（优先级1最高）
     if ~isempty(maintenance_advice.all_suggestions)
@@ -763,9 +776,14 @@ function advice_text = format_maintenance_advice(maintenance_advice)
     advice_text = sprintf('\n【维修建议汇总】共有 %d 种可能的故障原因\n', length(maintenance_advice.all_suggestions));
     advice_text = [advice_text sprintf('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n')];
     
+    % 调试信息
+    fprintf('调试：format_maintenance_advice - 建议总数: %d\n', length(maintenance_advice.all_suggestions));
+    
     % 遍历所有可能的维修建议
     for j = 1:length(maintenance_advice.all_suggestions)
         suggestion = maintenance_advice.all_suggestions{j};
+        
+        fprintf('调试：处理建议 %d - 故障代码: %s\n', j, suggestion.fault_code);
         
         advice_text = [advice_text sprintf('\n【故障%d】故障代码: %s - %s\n', ...
                                          j, suggestion.fault_code, suggestion.fault_name)];
@@ -774,27 +792,25 @@ function advice_text = format_maintenance_advice(maintenance_advice)
                                          suggestion.severity, suggestion.priority)];
         advice_text = [advice_text sprintf('维修措施:\n')];
         
-        % 获取measures的数量
+        % 检查measures的类型并处理
         if iscell(suggestion.measures)
-            num_measures = length(suggestion.measures);
-            % 显示所有措施
-            for i = 1:num_measures
+            fprintf('调试：measures是元胞数组，长度: %d\n', length(suggestion.measures));
+            for i = 1:length(suggestion.measures)
                 measure = suggestion.measures{i};
                 advice_text = [advice_text sprintf('  步骤%d: %s\n', measure.step, measure.action)];
                 advice_text = [advice_text sprintf('         耗时: %s | 工具: %s\n', ...
                                                  measure.time, measure.tools)];
             end
         elseif isstruct(suggestion.measures)
-            num_measures = length(suggestion.measures);
-            % 显示所有措施
-            for i = 1:num_measures
+            fprintf('调试：measures是结构体数组，长度: %d\n', length(suggestion.measures));
+            for i = 1:length(suggestion.measures)
                 measure = suggestion.measures(i);
                 advice_text = [advice_text sprintf('  步骤%d: %s\n', measure.step, measure.action)];
                 advice_text = [advice_text sprintf('         耗时: %s | 工具: %s\n', ...
                                                  measure.time, measure.tools)];
             end
         else
-            num_measures = 0;
+            fprintf('调试：measures类型未知: %s\n', class(suggestion.measures));
             advice_text = [advice_text sprintf('  （无维修措施）\n')];
         end
         
@@ -802,6 +818,8 @@ function advice_text = format_maintenance_advice(maintenance_advice)
             advice_text = [advice_text sprintf('\n────────────────────────────────────────\n')];
         end
     end
+    
+    fprintf('调试：format_maintenance_advice 完成\n')
     
     advice_text = [advice_text sprintf('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n')];
 end
