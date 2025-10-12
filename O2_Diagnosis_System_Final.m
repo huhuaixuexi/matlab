@@ -170,12 +170,21 @@ periodic_alarm_control.alarm_interval = 600;        % 10分钟 = 600秒
 
 % 初始化可视化
 if config.enable_visualization
+     % 创建更大的窗口
      fig = figure('Name', '氧分析仪智能诊断维护系统 v5.1 - 修复版', ...
-                 'Position', [50, 50, 1600, 900], ...
+                 'Position', [30, 30, 1800, 1000], ...
                  'NumberTitle', 'off');
      
+     % 创建两个主要面板
+     % 左侧面板 - 数据显示
+     panel_left = uipanel('Parent', fig, 'Position', [0.01 0.01 0.48 0.98]);
+     
+     % 右侧面板 - 维修建议
+     panel_right = uipanel('Parent', fig, 'Position', [0.51 0.01 0.48 0.98]);
+     
+     % === 左侧面板内容 ===
      % 实时数据显示窗口
-     ax1 = subplot(2, 3, 1);
+     ax1 = subplot(2, 2, 1, 'Parent', panel_left);
      h_line = plot(NaN, NaN, 'b-', 'LineWidth', 1.5);
      hold on;
      h_alarm_points = plot(NaN, NaN, 'ro', 'MarkerSize', 8, 'MarkerFaceColor', 'r');
@@ -193,7 +202,7 @@ if config.enable_visualization
      legend('实时数据', '异常点', '当前值', 'Location', 'best');
      
      % 1小时数据窗口
-     ax2 = subplot(2, 3, 2);
+     ax2 = subplot(2, 2, 2, 'Parent', panel_left);
      h_buffer = plot(NaN, NaN, 'b-', 'LineWidth', 1);
      xlabel('时间 (小时)');
      ylabel('氧浓度 (%)');
@@ -203,24 +212,24 @@ if config.enable_visualization
      ylim([-0.5, 10.5]);
      
      % 统计信息面板
-     ax3 = subplot(2, 3, 3);
+     ax3 = subplot(2, 2, 3, 'Parent', panel_left);
      axis off;
      h_stats_text = text(0.05, 0.9, '', 'FontSize', 9, 'FontName', 'FixedWidth');
      title('实时统计信息');
      
      % 诊断日志面板
-     ax4 = subplot(2, 3, 4);
+     ax4 = subplot(2, 2, 4, 'Parent', panel_left);
      axis off;
      h_log_text = text(0.05, 0.95, '', 'FontSize', 8, 'FontName', 'FixedWidth', ...
                       'VerticalAlignment', 'top');
      title('诊断日志（最近5条）');
      
-     % 维修建议面板
-     ax5 = subplot(2, 3, [5 6]);
+     % === 右侧面板内容 - 维修建议 ===
+     ax5 = axes('Parent', panel_right, 'Position', [0.05 0.05 0.9 0.9]);
      axis off;
-     h_maintenance_text = text(0.02, 0.98, '', 'FontSize', 8, 'FontName', 'FixedWidth', ...
-                              'VerticalAlignment', 'top');
-     title('当前维修建议');
+     h_maintenance_text = text(0.02, 0.98, '', 'FontSize', 7, 'FontName', 'FixedWidth', ...
+                              'VerticalAlignment', 'top', 'HorizontalAlignment', 'left');
+     title('维修建议详情', 'FontSize', 12, 'FontWeight', 'bold');
      
      drawnow;
 end
@@ -401,58 +410,48 @@ for i = 1:total_samples
              set(h_log_text, 'String', log_text);
          end
          
-         % 更新维修建议显示
+         % 更新维修建议显示（充分利用右侧面板空间）
          if ~isempty(current_maintenance_advice) && isfield(current_maintenance_advice, 'all_suggestions') && ~isempty(current_maintenance_advice.all_suggestions)
              maint_text = sprintf('【当前故障维修建议汇总】\n');
              maint_text = [maint_text sprintf('共有 %d 种可能的故障原因\n', length(current_maintenance_advice.all_suggestions))];
-             maint_text = [maint_text sprintf('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n')];
+             maint_text = [maint_text sprintf('═══════════════════════════════════════════════════════════\n\n')];
              
-             % 只显示前3个最高优先级的故障
-             num_to_show = min(3, length(current_maintenance_advice.all_suggestions));
-             
-             for k = 1:num_to_show
+             % 显示所有故障原因（右侧面板有足够空间）
+             for k = 1:length(current_maintenance_advice.all_suggestions)
                  suggestion = current_maintenance_advice.all_suggestions{k};
                  
-                 maint_text = [maint_text sprintf('\n【故障%d】%s - %s\n', ...
+                 maint_text = [maint_text sprintf('【故障%d】故障代码: %s - %s\n', ...
                                                 k, suggestion.fault_code, suggestion.fault_name)];
+                 maint_text = [maint_text sprintf('故障描述: %s\n', suggestion.description)];
                  maint_text = [maint_text sprintf('严重程度: %s | 优先级: %d\n', ...
                                                 suggestion.severity, suggestion.priority)];
-                 maint_text = [maint_text sprintf('维修步骤:\n')];
+                 maint_text = [maint_text sprintf('维修措施:\n')];
                  
-                 % 显示前3个步骤
+                 % 显示所有步骤
                  if iscell(suggestion.measures)
-                     num_steps = min(3, length(suggestion.measures));
-                     for j = 1:num_steps
+                     for j = 1:length(suggestion.measures)
                          measure = suggestion.measures{j};
-                         maint_text = [maint_text sprintf(' %d. %s (%s)\n', ...
-                                                        measure.step, measure.action, measure.time)];
-                     end
-                     if length(suggestion.measures) > 3
-                         maint_text = [maint_text sprintf(' ... 还有%d个步骤\n', ...
-                                                        length(suggestion.measures) - 3)];
+                         maint_text = [maint_text sprintf('  步骤%d: %s\n', ...
+                                                        measure.step, measure.action)];
+                         maint_text = [maint_text sprintf('         耗时: %s | 工具: %s\n', ...
+                                                        measure.time, measure.tools)];
                      end
                  elseif isstruct(suggestion.measures)
-                     num_steps = min(3, length(suggestion.measures));
-                     for j = 1:num_steps
+                     for j = 1:length(suggestion.measures)
                          measure = suggestion.measures(j);
-                         maint_text = [maint_text sprintf(' %d. %s (%s)\n', ...
-                                                        measure.step, measure.action, measure.time)];
-                     end
-                     if length(suggestion.measures) > 3
-                         maint_text = [maint_text sprintf(' ... 还有%d个步骤\n', ...
-                                                        length(suggestion.measures) - 3)];
+                         maint_text = [maint_text sprintf('  步骤%d: %s\n', ...
+                                                        measure.step, measure.action)];
+                         maint_text = [maint_text sprintf('         耗时: %s | 工具: %s\n', ...
+                                                        measure.time, measure.tools)];
                      end
                  end
                  
-                 if k < num_to_show
-                     maint_text = [maint_text sprintf('─────────────────────────\n')];
+                 if k < length(current_maintenance_advice.all_suggestions)
+                     maint_text = [maint_text sprintf('\n───────────────────────────────────────────────────────────\n\n')];
                  end
              end
              
-             if length(current_maintenance_advice.all_suggestions) > num_to_show
-                 maint_text = [maint_text sprintf('\n... 还有%d种可能的故障原因\n', ...
-                                                length(current_maintenance_advice.all_suggestions) - num_to_show)];
-             end
+             maint_text = [maint_text sprintf('\n═══════════════════════════════════════════════════════════\n')];
              
              set(h_maintenance_text, 'String', maint_text);
          end
