@@ -1040,8 +1040,18 @@ function generate_summary_report(data, basic_stats, efficiency_stats, pattern_st
     
     fprintf(fid, '\n【数据质量】\n');
     fprintf(fid, '数据完整性: 100%%\n');
-    fprintf(fid, '时间跨度: %.1f年\n', years(max(data.fault_time) - min(data.fault_time)));
-    fprintf(fid, '平均每月故障数: %.1f\n', length(data.fault_time) / months(max(data.fault_time) - min(data.fault_time)));
+    
+    % 计算时间跨度
+    time_span = max(data.fault_time) - min(data.fault_time);
+    years_span = days(time_span) / 365.25;
+    fprintf(fid, '时间跨度: %.1f年\n', years_span);
+    
+    % 计算月份数
+    start_date = min(data.fault_time);
+    end_date = max(data.fault_time);
+    num_months = (year(end_date) - year(start_date)) * 12 + (month(end_date) - month(start_date)) + 1;
+    
+    fprintf(fid, '平均每月故障数: %.1f\n', length(data.fault_time) / num_months);
     
     fclose(fid);
     
