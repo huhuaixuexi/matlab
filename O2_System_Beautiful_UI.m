@@ -519,6 +519,8 @@ for i = 1:total_samples
          
          % 更新统计信息（格式化为列表）
          stats_lines = {};
+         stats_lines{end+1} = '';  % 添加空行
+         stats_lines{end+1} = '';  % 添加第二个空行
          stats_lines{end+1} = '【实时监控统计】';
          stats_lines{end+1} = '═══════════════════════════════════════════';
          stats_lines{end+1} = sprintf('监控时长: %.2f 小时', sample_count/3600);
@@ -586,13 +588,20 @@ for i = 1:total_samples
          % 更新日志显示（使用listbox显示所有日志）
          all_logs = [alarm_log, log_entries];
          if ~isempty(all_logs)
+             % 在日志前添加空行
+             logs_with_padding = [{''; ''}, all_logs];  % 添加两个空行
              % 显示所有日志，并自动滚动到最新
-             set(h_log_text, 'String', all_logs, 'Value', length(all_logs));
+             set(h_log_text, 'String', logs_with_padding, 'Value', length(logs_with_padding));
+         else
+             % 如果没有日志，也显示空行
+             set(h_log_text, 'String', {''; ''; '等待诊断日志...'}, 'Value', 1);
          end
          
          % 更新维修建议显示（格式化为listbox）
          if ~isempty(current_maintenance_advice) && isfield(current_maintenance_advice, 'all_suggestions') && ~isempty(current_maintenance_advice.all_suggestions)
              maint_lines = {};
+             maint_lines{end+1} = '';  % 添加空行
+             maint_lines{end+1} = '';  % 添加第二个空行
              maint_lines{end+1} = sprintf('【当前故障维修建议汇总】共有 %d 种可能的故障原因', length(current_maintenance_advice.all_suggestions));
              maint_lines{end+1} = '═══════════════════════════════════════════════════════════════════';
              
