@@ -187,13 +187,14 @@ if config.enable_visualization
     % 统计信息面板
     ax3 = subplot(2, 2, 3);
     axis off;
-    h_stats_text = text(0.05, 0.9, '', 'FontSize', 10, 'FontName', 'FixedWidth');
+    h_stats_text = text(0.05, 0.85, '', 'FontSize', 10, 'FontName', 'FixedWidth', ...
+                       'VerticalAlignment', 'top');
     title('实时统计信息');
     
     % 诊断日志面板
     ax4 = subplot(2, 2, 4);
     axis off;
-    h_log_text = text(0.05, 0.95, '', 'FontSize', 9, 'FontName', 'FixedWidth', ...
+    h_log_text = text(0.05, 0.88, '', 'FontSize', 9, 'FontName', 'FixedWidth', ...
                      'VerticalAlignment', 'top');
     title('诊断日志（最近10条）');
     
@@ -312,7 +313,7 @@ for i = 1:total_samples
         set(h_buffer, 'XData', buffer_time, 'YData', data_buffer);
         
         % 更新统计信息
-        stats_text = sprintf(['监控时长: %.2f小时\n' ...
+        stats_text = sprintf(['\n\n监控时长: %.2f小时\n' ...
                             '处理样本: %d/%d\n' ...
                             '━━━━━━━━━━━━━━━━\n' ...
                             '总报警数: %d\n' ...
@@ -345,7 +346,7 @@ for i = 1:total_samples
         all_logs = [alarm_log, log_entries];
         if ~isempty(all_logs)
             recent_logs = all_logs(max(1, end-9):end);
-            log_text = strjoin(recent_logs, '\n');
+            log_text = sprintf('\n\n%s', strjoin(recent_logs, '\n'));
             set(h_log_text, 'String', log_text);
         end
         
