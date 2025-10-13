@@ -4,6 +4,10 @@
 
 function generate_fault_records_with_analysis()
     % 主函数
+    fprintf('========================================\n');
+    fprintf('故障诊断维修记录生成与分析系统\n');
+    fprintf('MATLAB版本: %s\n', version);
+    fprintf('========================================\n\n');
     fprintf('开始生成故障记录...\n');
     
     % 设置时间范围（5年）
@@ -1159,13 +1163,34 @@ function generate_visualizations(data, basic_stats, efficiency_stats, pattern_st
     title('TOP 10 故障代码');
     xlabel('数量');
     
-    % 5. 维修时间箱线图
+    % 5. 维修时间分布图（使用条形图代替箱线图）
     subplot(4, 3, 5);
     [unique_types, ~, idx] = unique(data.fault_type);
-    boxplot(data.duration_minutes, data.fault_type);
+    % 计算每种故障类型的平均值、最小值、最大值
+    type_stats = zeros(length(unique_types), 3); % 平均值、最小值、最大值
+    for i = 1:length(unique_types)
+        type_mask = strcmp(data.fault_type, unique_types{i});
+        type_durations = data.duration_minutes(type_mask);
+        type_stats(i, 1) = mean(type_durations);
+        type_stats(i, 2) = min(type_durations);
+        type_stats(i, 3) = max(type_durations);
+    end
+    
+    % 绘制分组条形图
+    bar_data = type_stats(:, 1); % 只显示平均值
+    bar(bar_data);
+    hold on;
+    % 添加误差线表示范围
+    errorbar(1:length(unique_types), type_stats(:, 1), ...
+        type_stats(:, 1) - type_stats(:, 2), ...
+        type_stats(:, 3) - type_stats(:, 1), 'k.', 'LineWidth', 1);
+    hold off;
+    
+    set(gca, 'XTick', 1:length(unique_types));
+    set(gca, 'XTickLabel', unique_types);
     title('各故障类型维修时间分布');
     xlabel('故障类型');
-    ylabel('时间(分钟)');
+    ylabel('平均时间(分钟)');
     xtickangle(45);
     
     % 6. 季度故障分布
@@ -1232,11 +1257,16 @@ function generate_visualizations(data, basic_stats, efficiency_stats, pattern_st
     for i = 1:length(data.dayofweek)
         dow = data.dayofweek(i);
         hr = data.hour(i) + 1;
-        heatmap_data(dow, hr) = heatmap_data(dow, hr) + 1;
+        if dow >= 1 && dow <= 7 && hr >= 1 && hr <= 24
+            heatmap_data(dow, hr) = heatmap_data(dow, hr) + 1;
+        end
     end
     imagesc(heatmap_data);
     colorbar;
+    set(gca, 'YTick', 1:7);
     set(gca, 'YTickLabel', {'日', '一', '二', '三', '四', '五', '六'});
+    set(gca, 'XTick', 1:4:24);
+    set(gca, 'XTickLabel', 0:4:20);
     xlabel('小时');
     ylabel('星期');
     title('故障时间热力图');
