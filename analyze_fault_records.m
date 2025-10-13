@@ -15,11 +15,12 @@ function analyze_fault_records(excel_file)
         excel_file = excel_files(idx).name;
     end
     
+    % 修复中文显示问题
+    fix_chinese_font_display();
+    
     % 设置图形默认属性
     set(0, 'DefaultAxesFontSize', 10);
-    set(0, 'DefaultAxesFontName', 'Arial');
     set(0, 'DefaultTextFontSize', 12);
-    set(0, 'DefaultTextFontName', 'Arial');
     
     fprintf('\n========================================\n');
     fprintf('故障诊断维修记录分析系统\n');
@@ -1056,4 +1057,61 @@ function generate_summary_report(data, basic_stats, efficiency_stats, pattern_st
     fclose(fid);
     
     fprintf('\n文字总结报告已保存: %s\n', report_filename);
+end
+
+function fix_chinese_font_display()
+    % 修复MATLAB中文显示问题
+    
+    % 获取可用字体列表
+    available_fonts = listfonts;
+    
+    % 定义优先使用的中文字体列表
+    chinese_fonts = {'SimHei', 'SimSun', 'Microsoft YaHei', 'Microsoft YaHei UI', ...
+                     'KaiTi', 'FangSong', 'Arial Unicode MS', 'Noto Sans CJK SC', ...
+                     'WenQuanYi Micro Hei', 'Droid Sans Fallback', 'DejaVu Sans', ...
+                     'Liberation Sans', 'Ubuntu', 'Helvetica'};
+    
+    % 查找可用的中文字体
+    found_font = '';
+    for i = 1:length(chinese_fonts)
+        if any(strcmpi(available_fonts, chinese_fonts{i}))
+            found_font = chinese_fonts{i};
+            break;
+        end
+    end
+    
+    % 如果没找到中文字体，使用系统默认
+    if isempty(found_font)
+        % 在Linux系统上尝试使用更通用的方案
+        if isunix && ~ismac
+            % Linux系统
+            found_font = 'Monospaced';
+        elseif ismac
+            % Mac系统
+            found_font = 'Helvetica';
+        else
+            % Windows系统
+            found_font = 'SimHei';
+        end
+    end
+    
+    % 设置所有相关的字体属性
+    set(0, 'DefaultAxesFontName', found_font);
+    set(0, 'DefaultTextFontName', found_font);
+    set(0, 'DefaultAxesTitleFontName', found_font);
+    set(0, 'DefaultAxesXLabelFontName', found_font);
+    set(0, 'DefaultAxesYLabelFontName', found_font);
+    set(0, 'DefaultLegendFontName', found_font);
+    set(0, 'DefaultTextInterpreter', 'none');  % 避免解释器问题
+    set(0, 'DefaultAxesTickLabelInterpreter', 'none');
+    set(0, 'DefaultLegendInterpreter', 'none');
+    
+    % 设置字符编码
+    try
+        feature('DefaultCharacterSet', 'UTF-8');
+    catch
+        % 某些MATLAB版本可能不支持此功能
+    end
+    
+    fprintf('已设置中文显示字体: %s\n', found_font);
 end

@@ -15,11 +15,12 @@ function analyze_fault_records_v2(excel_file)
         excel_file = excel_files(idx).name;
     end
     
+    % 修复中文显示问题
+    fix_chinese_font_display();
+    
     % 设置图形默认属性
     set(0, 'DefaultAxesFontSize', 10);
-    set(0, 'DefaultAxesFontName', 'Arial');
     set(0, 'DefaultTextFontSize', 12);
-    set(0, 'DefaultTextFontName', 'Arial');
     
     fprintf('\n========================================\n');
     fprintf('故障诊断维修记录分析系统\n');
@@ -1114,4 +1115,144 @@ function generate_summary_report(data, basic_stats, efficiency_stats, pattern_st
     fclose(fid);
     
     fprintf('\n文字总结报告已保存: %s\n', report_filename);
+end
+
+function fix_chinese_font_display()
+    % 修复MATLAB中文显示问题 - 增强版
+    
+    % 1. 设置环境变量（Linux系统）
+    if isunix && ~ismac
+        setenv('LANG', 'zh_CN.UTF-8');
+        setenv('LC_ALL', 'zh_CN.UTF-8');
+    end
+    
+    % 2. 获取可用字体列表
+    available_fonts = listfonts;
+    
+    % 3. 定义字体优先级（按可靠性排序）
+    font_priority = {
+        'Monospaced',          % 最通用的等宽字体
+        'SansSerif',           % 通用无衬线字体  
+        'Dialog',              % Java对话框字体
+        'SimHei',              % 黑体
+        'SimSun',              % 宋体
+        'Microsoft YaHei',     % 微软雅黑
+        'Microsoft YaHei UI',  % 微软雅黑UI
+        'Arial Unicode MS',    % Arial Unicode
+        'Noto Sans CJK SC',    % Google Noto中文
+        'Noto Sans Mono CJK SC', % Google Noto等宽中文
+        'WenQuanYi Micro Hei', % 文泉驿微米黑
+        'WenQuanYi Zen Hei',   % 文泉驿正黑
+        'Droid Sans Fallback', % Android后备字体
+        'DejaVu Sans',         % DejaVu字体
+        'Liberation Sans',     % Liberation字体
+        'Ubuntu',              % Ubuntu字体
+        'Helvetica'            % Mac默认字体
+    };
+    
+    % 4. 查找第一个可用的字体
+    found_font = '';
+    for i = 1:length(font_priority)
+        if any(strcmpi(available_fonts, font_priority{i}))
+            found_font = font_priority{i};
+            break;
+        end
+    end
+    
+    % 5. 如果没找到，使用系统特定的默认值
+    if isempty(found_font)
+        if isunix && ~ismac
+            found_font = 'Monospaced';  % Linux默认
+        elseif ismac
+            found_font = 'Helvetica';    % Mac默认
+        else
+            found_font = 'SimHei';       % Windows默认
+        end
+    end
+    
+    % 6. 设置所有字体相关属性
+    font_properties = {
+        'DefaultAxesFontName'
+        'DefaultTextFontName'
+        'DefaultUicontrolFontName'
+        'DefaultUipanelFontName'
+        'DefaultAxesXLabelFontName'
+        'DefaultAxesYLabelFontName'
+        'DefaultAxesZLabelFontName'
+        'DefaultAxesTitleFontName'
+        'DefaultTextarrowshapeFontName'
+        'DefaultLegendFontName'
+    };
+    
+    for i = 1:length(font_properties)
+        try
+            set(0, font_properties{i}, found_font);
+        catch
+            % 忽略不存在的属性
+        end
+    end
+    
+    % 7. 关闭所有TeX/LaTeX解释器
+    interpreter_properties = {
+        'DefaultTextInterpreter'
+        'DefaultAxesTickLabelInterpreter'
+        'DefaultLegendInterpreter'
+        'DefaultColorbarTickLabelInterpreter'
+        'DefaultTextarrowshapeInterpreter'
+    };
+    
+    for i = 1:length(interpreter_properties)
+        try
+            set(0, interpreter_properties{i}, 'none');
+        catch
+            % 忽略不存在的属性
+        end
+    end
+    
+    % 8. 设置渲染器（解决某些显示问题）
+    try
+        set(0, 'DefaultFigureRenderer', 'painters');
+    catch
+        try
+            set(0, 'DefaultFigureRenderer', 'opengl');
+        catch
+            % 使用默认渲染器
+        end
+    end
+    
+    % 9. 设置字体平滑
+    try
+        set(0, 'DefaultAxesFontSmoothing', 'on');
+        set(0, 'DefaultTextFontSmoothing', 'on');
+    catch
+        % 某些版本可能不支持
+    end
+    
+    % 10. 设置字符编码
+    try
+        feature('DefaultCharacterSet', 'UTF-8');
+    catch
+        % 某些MATLAB版本可能不支持
+    end
+    
+    % 11. 特殊处理：如果是Monospaced字体，设置字体替换
+    if strcmpi(found_font, 'Monospaced')
+        try
+            % 尝试设置Java字体映射
+            com.mathworks.services.FontPrefs.setCodeFont('Noto Sans Mono CJK SC');
+        catch
+            % Java方法可能不可用
+        end
+    end
+    
+    fprintf('已设置中文显示字体: %s\n', found_font);
+    
+    % 12. 验证设置
+    if strcmpi(found_font, 'Monospaced') || strcmpi(found_font, 'SansSerif')
+        fprintf('提示：使用通用字体，中文显示依赖系统配置\n');
+        fprintf('建议安装中文字体包：\n');
+        if isunix && ~ismac
+            fprintf('  sudo apt-get install fonts-noto-cjk fonts-wqy-microhei\n');
+        end
+    end
 end
