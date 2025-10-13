@@ -694,7 +694,7 @@ function stats = basic_statistics_analysis(data)
         fprintf('%d年: %d次\n', years(i), yearly_counts(i));
     end
     
-    stats.yearly_counts = [years', yearly_counts];
+    stats.yearly_counts = struct('years', years', 'counts', yearly_counts);
     
     % 故障类型分布
     fprintf('\n【故障类型分布】\n');
@@ -830,7 +830,7 @@ function stats = fault_pattern_analysis(data)
         fprintf('优先级%d: %d次 (%.1f%%)\n', unique_priorities(i), priority_counts(i), percentage);
     end
     
-    stats.priority_counts = [unique_priorities, priority_counts];
+    stats.priority_counts = struct('priorities', unique_priorities, 'counts', priority_counts);
     
     % 高优先级故障详情
     high_priority_mask = data.priority == 1;
@@ -867,7 +867,7 @@ function stats = fault_pattern_analysis(data)
         end
     end
     
-    stats.seasonal_counts = [(1:4)', quarter_counts];
+    stats.seasonal_counts = struct('quarters', (1:4)', 'counts', quarter_counts);
     
     % 工作日vs周末分析
     is_workday = data.dayofweek >= 2 & data.dayofweek <= 6;
@@ -1032,7 +1032,8 @@ function stats = predictive_analysis(data)
         fprintf('%s: 预计%d次故障\n', datestr(future_month, 'yyyy-mm'), pred_count);
     end
     
-    stats.monthly_faults = [months', monthly_counts];
+    % 保存为结构体而不是数组拼接
+    stats.monthly_faults = struct('months', months', 'counts', monthly_counts);
     stats.predictions = predictions;
     
     % 备件需求预测
@@ -1127,11 +1128,18 @@ function generate_visualizations(data, basic_stats, efficiency_stats, pattern_st
     
     % 2. 月度故障趋势图
     subplot(4, 3, 2);
-    monthly_data = accumarray([data.year - min(data.year) + 1, data.month], 1);
-    bar(monthly_data');
-    title('月度故障分布');
-    xlabel('月份');
+    % 创建年月组合统计
+    year_month = data.year * 100 + data.month;
+    unique_ym = unique(year_month);
+    ym_counts = zeros(length(unique_ym), 1);
+    for i = 1:length(unique_ym)
+        ym_counts(i) = sum(year_month == unique_ym(i));
+    end
+    plot(1:length(unique_ym), ym_counts, '-o');
+    title('月度故障趋势');
+    xlabel('时间序号');
     ylabel('故障数');
+    grid on;
     
     % 3. 严重程度分布条形图
     subplot(4, 3, 3);
@@ -1163,7 +1171,7 @@ function generate_visualizations(data, basic_stats, efficiency_stats, pattern_st
     % 6. 季度故障分布
     subplot(4, 3, 6);
     seasonal_data = pattern_stats.seasonal_counts;
-    bar(seasonal_data(:, 2));
+    bar(seasonal_data.counts);
     set(gca, 'XTickLabel', {'Q1', 'Q2', 'Q3', 'Q4'});
     title('季度故障分布');
     xlabel('季度');
@@ -1172,8 +1180,8 @@ function generate_visualizations(data, basic_stats, efficiency_stats, pattern_st
     % 7. 优先级分布
     subplot(4, 3, 7);
     priority_data = pattern_stats.priority_counts;
-    bar(priority_data(:, 2));
-    set(gca, 'XTickLabel', arrayfun(@num2str, priority_data(:, 1), 'UniformOutput', false));
+    bar(priority_data.counts);
+    set(gca, 'XTickLabel', arrayfun(@num2str, priority_data.priorities, 'UniformOutput', false));
     title('优先级分布');
     xlabel('优先级');
     ylabel('数量');
@@ -1236,7 +1244,7 @@ function generate_visualizations(data, basic_stats, efficiency_stats, pattern_st
     % 11. 年度故障趋势
     subplot(4, 3, 11);
     yearly_data = basic_stats.yearly_counts;
-    bar(yearly_data(:, 1), yearly_data(:, 2));
+    bar(yearly_data.years, yearly_data.counts);
     title('年度故障趋势');
     xlabel('年份');
     ylabel('故障数');
