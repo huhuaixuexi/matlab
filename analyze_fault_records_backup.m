@@ -1,8 +1,8 @@
-%% 故障诊断维修记录分析系统 - MATLAB版本（兼容版）
+%% 故障诊断维修记录分析系统 - MATLAB版本
 % 读取Excel文件中的故障记录并进行全面分析
 % 生成可视化报告和文字分析报告
 
-function analyze_fault_records_v2(excel_file)
+function analyze_fault_records(excel_file)
     % 主函数 - 分析故障记录
     
     % 如果没有指定文件，选择最新的Excel文件
@@ -28,29 +28,22 @@ function analyze_fault_records_v2(excel_file)
     
     fprintf('正在分析文件: %s\n', excel_file);
     
-    % 读取Excel数据 - 使用更兼容的方法
+    % 读取Excel数据
     try
-        % 首先尝试直接读取
-        [~, ~, raw_data] = xlsread(excel_file, '故障维修记录');
+        % 使用VariableNamingRule来保留原始列名
+        data_table = readtable(excel_file, 'Sheet', '故障维修记录', ...
+            'VariableNamingRule', 'preserve');
+        fprintf('成功读取 %d 条记录\n', height(data_table));
         
-        % 提取标题和数据
-        headers = raw_data(1, :);
-        data_cells = raw_data(2:end, :);
-        
-        fprintf('成功读取 %d 条记录\n', size(data_cells, 1));
-        
-        % 显示列标题
-        fprintf('\n数据表列标题:\n');
-        for i = 1:length(headers)
-            fprintf('  列%d: %s\n', i, headers{i});
-        end
-        
+        % 显示列名以便调试
+        fprintf('数据表列名:\n');
+        disp(data_table.Properties.VariableNames);
     catch ME
         error('读取Excel文件失败: %s', ME.message);
     end
     
     % 转换为结构化数据
-    data = preprocess_data_from_cells(data_cells, headers);
+    data = preprocess_data(data_table);
     
     % 执行各项分析
     fprintf('\n开始执行分析...\n');
@@ -82,74 +75,38 @@ function analyze_fault_records_v2(excel_file)
     fprintf('========================================\n');
 end
 
-function data = preprocess_data_from_cells(data_cells, headers)
-    % 从cell数组预处理数据
+function data = preprocess_data(data_table)
+    % 数据预处理
     data = struct();
     
-    % 查找列索引
-    col_idx = struct();
-    for i = 1:length(headers)
-        header = headers{i};
-        switch header
-            case '数据故障代码'
-                col_idx.data_fault_code = i;
-            case '故障时间'
-                col_idx.fault_time = i;
-            case '仪表故障代码'
-                col_idx.instrument_fault_code = i;
-            case '故障描述/名称'
-                col_idx.fault_name = i;
-            case '故障类型'
-                col_idx.fault_type = i;
-            case '严重程度'
-                col_idx.severity = i;
-            case '优先级'
-                col_idx.priority = i;
-            case '维修操作'
-                col_idx.operation = i;
-            case '耗时'
-                col_idx.duration = i;
-            case '工具'
-                col_idx.tools = i;
-        end
-    end
+    % 获取列名
+    col_names = data_table.Properties.VariableNames;
     
-    % 提取数据
-    n_records = size(data_cells, 1);
-    
-    % 初始化数组
-    data.data_fault_code = cell(n_records, 1);
-    data.fault_time = NaT(n_records, 1);
-    data.instrument_fault_code = cell(n_records, 1);
-    data.fault_name = cell(n_records, 1);
-    data.fault_type = cell(n_records, 1);
-    data.severity = cell(n_records, 1);
-    data.priority = zeros(n_records, 1);
-    data.operation = cell(n_records, 1);
-    data.duration = cell(n_records, 1);
-    data.tools = cell(n_records, 1);
-    
-    % 填充数据
-    for i = 1:n_records
-        data.data_fault_code{i} = data_cells{i, col_idx.data_fault_code};
-        
-        % 处理时间字段
-        time_str = data_cells{i, col_idx.fault_time};
-        if ischar(time_str) || isstring(time_str)
-            data.fault_time(i) = datetime(time_str, 'InputFormat', 'yyyy-MM-dd HH:mm:ss');
-        elseif isnumeric(time_str)
-            % Excel日期格式
-            data.fault_time(i) = datetime(time_str, 'ConvertFrom', 'excel');
-        end
-        
-        data.instrument_fault_code{i} = data_cells{i, col_idx.instrument_fault_code};
-        data.fault_name{i} = data_cells{i, col_idx.fault_name};
-        data.fault_type{i} = data_cells{i, col_idx.fault_type};
-        data.severity{i} = data_cells{i, col_idx.severity};
-        data.priority(i) = data_cells{i, col_idx.priority};
-        data.operation{i} = data_cells{i, col_idx.operation};
-        data.duration{i} = data_cells{i, col_idx.duration};
-        data.tools{i} = data_cells{i, col_idx.tools};
+    % 基本字段 - 使用实际的列名或列索引
+    if ismember('数据故障代码', col_names)
+        % 如果保留了原始列名
+        data.data_fault_code = data_table.('数据故障代码');
+        data.fault_time = datetime(data_table.('故障时间'), 'InputFormat', 'yyyy-MM-dd HH:mm:ss');
+        data.instrument_fault_code = data_table.('仪表故障代码');
+        data.fault_name = data_table.('故障描述/名称');
+        data.fault_type = data_table.('故障类型');
+        data.severity = data_table.('严重程度');
+        data.priority = data_table.('优先级');
+        data.operation = data_table.('维修操作');
+        data.duration = data_table.('耗时');
+        data.tools = data_table.('工具');
+    else
+        % 如果使用了默认变量名，按列索引访问
+        data.data_fault_code = data_table{:, 1};
+        data.fault_time = datetime(data_table{:, 2}, 'InputFormat', 'yyyy-MM-dd HH:mm:ss');
+        data.instrument_fault_code = data_table{:, 3};
+        data.fault_name = data_table{:, 4};
+        data.fault_type = data_table{:, 5};
+        data.severity = data_table{:, 6};
+        data.priority = data_table{:, 7};
+        data.operation = data_table{:, 8};
+        data.duration = data_table{:, 9};
+        data.tools = data_table{:, 10};
     end
     
     % 时间相关字段
@@ -181,8 +138,6 @@ function minutes = parse_duration(duration_cell)
         end
     end
 end
-
-% ========== 以下函数与原版本相同 ==========
 
 function stats = basic_statistics_analysis(data)
     % 1. 基础统计分析
@@ -668,7 +623,6 @@ function generate_comprehensive_report(data, basic_stats, efficiency_stats, ...
     pie([type_data{:, 2}]);
     title('故障类型分布', 'FontSize', 14, 'FontWeight', 'bold');
     legend(type_data(:, 1), 'Location', 'eastoutside', 'FontSize', 10);
-    % 饼图不需要坐标轴标签
     
     % 2. 月度故障趋势图
     subplot(2, 3, 2);
@@ -682,9 +636,9 @@ function generate_comprehensive_report(data, basic_stats, efficiency_stats, ...
     trend_line = polyval(p, X);
     plot(monthly_data.months, trend_line, 'r--', 'LineWidth', 1.5);
     hold off;
-    title('月度故障趋势图', 'FontSize', 14, 'FontWeight', 'bold');
-    xlabel('时间（年-月）', 'FontSize', 12, 'FontWeight', 'bold');
-    ylabel('故障数量（次）', 'FontSize', 12, 'FontWeight', 'bold');
+    title('月度故障趋势', 'FontSize', 14, 'FontWeight', 'bold');
+    xlabel('时间');
+    ylabel('故障数量');
     legend({'实际数据', '趋势线'}, 'Location', 'best');
     grid on;
     datetick('x', 'yyyy-mm', 'keepticks');
@@ -706,9 +660,9 @@ function generate_comprehensive_report(data, basic_stats, efficiency_stats, ...
     end
     
     set(gca, 'XTickLabel', severity_data(:, 1));
-    title('故障严重程度分布条形图', 'FontSize', 14, 'FontWeight', 'bold');
-    xlabel('严重程度等级', 'FontSize', 12, 'FontWeight', 'bold');
-    ylabel('故障数量（次）', 'FontSize', 12, 'FontWeight', 'bold');
+    title('故障严重程度分布', 'FontSize', 14, 'FontWeight', 'bold');
+    xlabel('严重程度');
+    ylabel('数量');
     
     % 添加数值标签
     for i = 1:length(bar_data)
@@ -717,7 +671,6 @@ function generate_comprehensive_report(data, basic_stats, efficiency_stats, ...
             'VerticalAlignment', 'bottom', ...
             'FontSize', 10);
     end
-    grid on;
     
     % 4. TOP10故障代码
     subplot(2, 3, 4);
@@ -726,9 +679,8 @@ function generate_comprehensive_report(data, basic_stats, efficiency_stats, ...
     barh([top10_codes{:, 2}], 'FaceColor', [0.3 0.6 0.8]);
     set(gca, 'YTick', 1:size(top10_codes, 1));
     set(gca, 'YTickLabel', top10_codes(:, 1));
-    title('TOP 10 故障代码横向条形图', 'FontSize', 14, 'FontWeight', 'bold');
-    xlabel('故障发生次数', 'FontSize', 12, 'FontWeight', 'bold');
-    ylabel('故障代码', 'FontSize', 12, 'FontWeight', 'bold');
+    title('TOP 10 故障代码', 'FontSize', 14, 'FontWeight', 'bold');
+    xlabel('发生次数');
     grid on;
     
     % 5. 数据故障类型分布
@@ -753,17 +705,15 @@ function generate_comprehensive_report(data, basic_stats, efficiency_stats, ...
     end
     
     pie(data_fault_counts, data_fault_labels);
-    title('数据故障类型分布饼图', 'FontSize', 14, 'FontWeight', 'bold');
-    % 饼图不需要坐标轴标签
+    title('数据故障类型分布', 'FontSize', 14, 'FontWeight', 'bold');
     
     % 6. 年度故障统计
     subplot(2, 3, 6);
     yearly_data = basic_stats.yearly_counts;
     bar(yearly_data.years, yearly_data.counts, 'FaceColor', [0.5 0.8 0.5]);
-    title('年度故障统计条形图', 'FontSize', 14, 'FontWeight', 'bold');
-    xlabel('年份', 'FontSize', 12, 'FontWeight', 'bold');
-    ylabel('故障数量（次）', 'FontSize', 12, 'FontWeight', 'bold');
-    grid on;
+    title('年度故障统计', 'FontSize', 14, 'FontWeight', 'bold');
+    xlabel('年份');
+    ylabel('故障数量');
     
     % 添加数值标签
     for i = 1:length(yearly_data.counts)
@@ -803,9 +753,9 @@ function generate_comprehensive_report(data, basic_stats, efficiency_stats, ...
     
     set(gca, 'XTick', 1:length(type_names));
     set(gca, 'XTickLabel', type_names);
-    title('各故障类型平均维修时间条形图', 'FontSize', 14, 'FontWeight', 'bold');
-    xlabel('故障类型', 'FontSize', 12, 'FontWeight', 'bold');
-    ylabel('维修时间（分钟）', 'FontSize', 12, 'FontWeight', 'bold');
+    title('各故障类型平均维修时间', 'FontSize', 14, 'FontWeight', 'bold');
+    xlabel('故障类型');
+    ylabel('时间(分钟)');
     xtickangle(45);
     grid on;
     
@@ -816,9 +766,8 @@ function generate_comprehensive_report(data, basic_stats, efficiency_stats, ...
     barh([top10_tools{:, 2}], 'FaceColor', [0.9 0.7 0.5]);
     set(gca, 'YTick', 1:size(top10_tools, 1));
     set(gca, 'YTickLabel', top10_tools(:, 1));
-    title('TOP 10 常用工具横向条形图', 'FontSize', 14, 'FontWeight', 'bold');
-    xlabel('使用次数', 'FontSize', 12, 'FontWeight', 'bold');
-    ylabel('工具名称', 'FontSize', 12, 'FontWeight', 'bold');
+    title('TOP 10 常用工具', 'FontSize', 14, 'FontWeight', 'bold');
+    xlabel('使用次数');
     grid on;
     
     % 3. 季度故障分布
@@ -827,10 +776,9 @@ function generate_comprehensive_report(data, basic_stats, efficiency_stats, ...
     bar(seasonal_data.quarters, seasonal_data.counts, 'FaceColor', [0.8 0.8 0.3]);
     set(gca, 'XTick', 1:4);
     set(gca, 'XTickLabel', {'春季(Q1)', '夏季(Q2)', '秋季(Q3)', '冬季(Q4)'});
-    title('季度故障分布条形图', 'FontSize', 14, 'FontWeight', 'bold');
-    xlabel('季度', 'FontSize', 12, 'FontWeight', 'bold');
-    ylabel('故障数量（次）', 'FontSize', 12, 'FontWeight', 'bold');
-    grid on;
+    title('季度故障分布', 'FontSize', 14, 'FontWeight', 'bold');
+    xlabel('季度');
+    ylabel('故障数量');
     
     % 添加数值标签
     for i = 1:length(seasonal_data.counts)
@@ -849,9 +797,8 @@ function generate_comprehensive_report(data, basic_stats, efficiency_stats, ...
         priority_data.priorities, 'UniformOutput', false);
     
     pie(pie_data, pie_labels);
-    title('故障优先级分布饼图', 'FontSize', 14, 'FontWeight', 'bold');
+    title('故障优先级分布', 'FontSize', 14, 'FontWeight', 'bold');
     colormap(gca, [1 0.3 0.3; 1 0.7 0.3; 0.3 0.8 0.3]);
-    % 饼图不需要坐标轴标签
     
     % 5. 工作日vs周末分布
     subplot(2, 3, 5);
@@ -860,8 +807,7 @@ function generate_comprehensive_report(data, basic_stats, efficiency_stats, ...
     pie_labels = {sprintf('工作日\n%d次', workday_data(1)), ...
                   sprintf('周末\n%d次', workday_data(2))};
     pie(pie_data, pie_labels);
-    title('工作日vs周末故障分布饼图', 'FontSize', 14, 'FontWeight', 'bold');
-    % 饼图不需要坐标轴标签
+    title('工作日vs周末故障分布', 'FontSize', 14, 'FontWeight', 'bold');
     colormap(gca, [0.7 0.7 0.9; 0.9 0.7 0.7]);
     
     % 6. 故障时间热力图
@@ -885,8 +831,8 @@ function generate_comprehensive_report(data, basic_stats, efficiency_stats, ...
     set(gca, 'XTickLabel', {'0', '5', '11', '17', '23'});
     
     title('故障发生时间分布热力图', 'FontSize', 14, 'FontWeight', 'bold');
-    xlabel('小时（0-23点）', 'FontSize', 12, 'FontWeight', 'bold');
-    ylabel('星期', 'FontSize', 12, 'FontWeight', 'bold');
+    xlabel('小时');
+    ylabel('星期');
     
     % 添加总标题
     sgtitle('故障诊断维修记录分析报告 - 维修效率与模式', ...
@@ -904,10 +850,9 @@ function generate_comprehensive_report(data, basic_stats, efficiency_stats, ...
     bar_data = [severity_time_data{:, 2}];
     bar(bar_data, 'FaceColor', [0.8 0.6 0.8]);
     set(gca, 'XTickLabel', severity_time_data(:, 1));
-    title('严重程度与平均维修时间条形图', 'FontSize', 14, 'FontWeight', 'bold');
-    xlabel('严重程度', 'FontSize', 12, 'FontWeight', 'bold');
-    ylabel('平均维修时间（分钟）', 'FontSize', 12, 'FontWeight', 'bold');
-    grid on;
+    title('严重程度与平均维修时间', 'FontSize', 14, 'FontWeight', 'bold');
+    xlabel('严重程度');
+    ylabel('平均时间(分钟)');
     
     % 添加数值标签
     for i = 1:length(bar_data)
@@ -931,9 +876,8 @@ function generate_comprehensive_report(data, basic_stats, efficiency_stats, ...
     
     set(gca, 'YTick', 1:length(ylabels));
     set(gca, 'YTickLabel', ylabels);
-    title('最复杂故障TOP5横向条形图', 'FontSize', 14, 'FontWeight', 'bold');
-    xlabel('平均维修时间（分钟）', 'FontSize', 12, 'FontWeight', 'bold');
-    ylabel('故障代码', 'FontSize', 12, 'FontWeight', 'bold');
+    title('最复杂故障TOP5(按维修时间)', 'FontSize', 14, 'FontWeight', 'bold');
+    xlabel('平均维修时间(分钟)');
     grid on;
     
     % 3. 故障趋势预测
@@ -949,9 +893,9 @@ function generate_comprehensive_report(data, basic_stats, efficiency_stats, ...
     plot(future_months, predictions, 'r--o', ...
         'LineWidth', 2, 'MarkerSize', 6);
     
-    title('故障趋势与预测折线图', 'FontSize', 14, 'FontWeight', 'bold');
-    xlabel('时间（年-月）', 'FontSize', 12, 'FontWeight', 'bold');
-    ylabel('故障数量（次）', 'FontSize', 12, 'FontWeight', 'bold');
+    title('故障趋势与预测', 'FontSize', 14, 'FontWeight', 'bold');
+    xlabel('时间');
+    ylabel('故障数量');
     legend({'历史数据', '预测数据'}, 'Location', 'best');
     grid on;
     datetick('x', 'yyyy-mm', 'keepticks');
@@ -967,10 +911,9 @@ function generate_comprehensive_report(data, basic_stats, efficiency_stats, ...
     
     bar(parts_counts, 'FaceColor', [0.6 0.8 0.6]);
     set(gca, 'XTickLabel', parts_names);
-    title('备件更换统计条形图', 'FontSize', 14, 'FontWeight', 'bold');
-    xlabel('备件类型', 'FontSize', 12, 'FontWeight', 'bold');
-    ylabel('更换次数', 'FontSize', 12, 'FontWeight', 'bold');
-    grid on;
+    title('备件更换统计', 'FontSize', 14, 'FontWeight', 'bold');
+    xlabel('备件类型');
+    ylabel('更换次数');
     
     % 添加数值标签
     for i = 1:length(parts_counts)
@@ -1004,9 +947,8 @@ function generate_comprehensive_report(data, basic_stats, efficiency_stats, ...
         
         set(gca, 'YTick', y_pos);
         set(gca, 'YTickLabel', op_labels);
-        title('TOP 10 最快维修操作横向条形图', 'FontSize', 14, 'FontWeight', 'bold');
-        xlabel('平均维修时间（分钟）', 'FontSize', 12, 'FontWeight', 'bold');
-        ylabel('维修操作（含次数）', 'FontSize', 12, 'FontWeight', 'bold');
+        title('TOP 10 最快维修操作', 'FontSize', 14, 'FontWeight', 'bold');
+        xlabel('平均时间(分钟)');
         grid on;
     end
     
