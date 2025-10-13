@@ -588,10 +588,10 @@ for i = 1:total_samples
          % 更新日志显示（使用listbox显示所有日志）
          all_logs = [alarm_log, log_entries];
          if ~isempty(all_logs)
-             % 在日志前添加空行
-             logs_with_padding = [{''; ''}, all_logs];  % 添加两个空行
+             % 在日志前添加空行，确保是列向量
+             logs_with_padding = [{'', ''}, all_logs];  % 添加两个空行作为行向量
              % 显示所有日志，并自动滚动到最新
-             set(h_log_text, 'String', logs_with_padding, 'Value', length(logs_with_padding));
+             set(h_log_text, 'String', logs_with_padding', 'Value', length(logs_with_padding));  % 转置为列向量
          else
              % 如果没有日志，也显示空行
              set(h_log_text, 'String', {''; ''; '等待诊断日志...'}, 'Value', 1);
