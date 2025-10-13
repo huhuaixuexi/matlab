@@ -1,8 +1,8 @@
-%% 故障诊断维修记录分析系统 - MATLAB版本
+%% 故障诊断维修记录分析系统 - MATLAB版本（兼容版）
 % 读取Excel文件中的故障记录并进行全面分析
 % 生成可视化报告和文字分析报告
 
-function analyze_fault_records(excel_file)
+function analyze_fault_records_v2(excel_file)
     % 主函数 - 分析故障记录
     
     % 如果没有指定文件，选择最新的Excel文件
@@ -28,22 +28,29 @@ function analyze_fault_records(excel_file)
     
     fprintf('正在分析文件: %s\n', excel_file);
     
-    % 读取Excel数据
+    % 读取Excel数据 - 使用更兼容的方法
     try
-        % 使用VariableNamingRule来保留原始列名
-        data_table = readtable(excel_file, 'Sheet', '故障维修记录', ...
-            'VariableNamingRule', 'preserve');
-        fprintf('成功读取 %d 条记录\n', height(data_table));
+        % 首先尝试直接读取
+        [~, ~, raw_data] = xlsread(excel_file, '故障维修记录');
         
-        % 显示列名以便调试
-        fprintf('数据表列名:\n');
-        disp(data_table.Properties.VariableNames);
+        % 提取标题和数据
+        headers = raw_data(1, :);
+        data_cells = raw_data(2:end, :);
+        
+        fprintf('成功读取 %d 条记录\n', size(data_cells, 1));
+        
+        % 显示列标题
+        fprintf('\n数据表列标题:\n');
+        for i = 1:length(headers)
+            fprintf('  列%d: %s\n', i, headers{i});
+        end
+        
     catch ME
         error('读取Excel文件失败: %s', ME.message);
     end
     
     % 转换为结构化数据
-    data = preprocess_data(data_table);
+    data = preprocess_data_from_cells(data_cells, headers);
     
     % 执行各项分析
     fprintf('\n开始执行分析...\n');
@@ -75,38 +82,74 @@ function analyze_fault_records(excel_file)
     fprintf('========================================\n');
 end
 
-function data = preprocess_data(data_table)
-    % 数据预处理
+function data = preprocess_data_from_cells(data_cells, headers)
+    % 从cell数组预处理数据
     data = struct();
     
-    % 获取列名
-    col_names = data_table.Properties.VariableNames;
+    % 查找列索引
+    col_idx = struct();
+    for i = 1:length(headers)
+        header = headers{i};
+        switch header
+            case '数据故障代码'
+                col_idx.data_fault_code = i;
+            case '故障时间'
+                col_idx.fault_time = i;
+            case '仪表故障代码'
+                col_idx.instrument_fault_code = i;
+            case '故障描述/名称'
+                col_idx.fault_name = i;
+            case '故障类型'
+                col_idx.fault_type = i;
+            case '严重程度'
+                col_idx.severity = i;
+            case '优先级'
+                col_idx.priority = i;
+            case '维修操作'
+                col_idx.operation = i;
+            case '耗时'
+                col_idx.duration = i;
+            case '工具'
+                col_idx.tools = i;
+        end
+    end
     
-    % 基本字段 - 使用实际的列名或列索引
-    if ismember('数据故障代码', col_names)
-        % 如果保留了原始列名
-        data.data_fault_code = data_table.('数据故障代码');
-        data.fault_time = datetime(data_table.('故障时间'), 'InputFormat', 'yyyy-MM-dd HH:mm:ss');
-        data.instrument_fault_code = data_table.('仪表故障代码');
-        data.fault_name = data_table.('故障描述/名称');
-        data.fault_type = data_table.('故障类型');
-        data.severity = data_table.('严重程度');
-        data.priority = data_table.('优先级');
-        data.operation = data_table.('维修操作');
-        data.duration = data_table.('耗时');
-        data.tools = data_table.('工具');
-    else
-        % 如果使用了默认变量名，按列索引访问
-        data.data_fault_code = data_table{:, 1};
-        data.fault_time = datetime(data_table{:, 2}, 'InputFormat', 'yyyy-MM-dd HH:mm:ss');
-        data.instrument_fault_code = data_table{:, 3};
-        data.fault_name = data_table{:, 4};
-        data.fault_type = data_table{:, 5};
-        data.severity = data_table{:, 6};
-        data.priority = data_table{:, 7};
-        data.operation = data_table{:, 8};
-        data.duration = data_table{:, 9};
-        data.tools = data_table{:, 10};
+    % 提取数据
+    n_records = size(data_cells, 1);
+    
+    % 初始化数组
+    data.data_fault_code = cell(n_records, 1);
+    data.fault_time = NaT(n_records, 1);
+    data.instrument_fault_code = cell(n_records, 1);
+    data.fault_name = cell(n_records, 1);
+    data.fault_type = cell(n_records, 1);
+    data.severity = cell(n_records, 1);
+    data.priority = zeros(n_records, 1);
+    data.operation = cell(n_records, 1);
+    data.duration = cell(n_records, 1);
+    data.tools = cell(n_records, 1);
+    
+    % 填充数据
+    for i = 1:n_records
+        data.data_fault_code{i} = data_cells{i, col_idx.data_fault_code};
+        
+        % 处理时间字段
+        time_str = data_cells{i, col_idx.fault_time};
+        if ischar(time_str) || isstring(time_str)
+            data.fault_time(i) = datetime(time_str, 'InputFormat', 'yyyy-MM-dd HH:mm:ss');
+        elseif isnumeric(time_str)
+            % Excel日期格式
+            data.fault_time(i) = datetime(time_str, 'ConvertFrom', 'excel');
+        end
+        
+        data.instrument_fault_code{i} = data_cells{i, col_idx.instrument_fault_code};
+        data.fault_name{i} = data_cells{i, col_idx.fault_name};
+        data.fault_type{i} = data_cells{i, col_idx.fault_type};
+        data.severity{i} = data_cells{i, col_idx.severity};
+        data.priority(i) = data_cells{i, col_idx.priority};
+        data.operation{i} = data_cells{i, col_idx.operation};
+        data.duration{i} = data_cells{i, col_idx.duration};
+        data.tools{i} = data_cells{i, col_idx.tools};
     end
     
     % 时间相关字段
@@ -138,6 +181,8 @@ function minutes = parse_duration(duration_cell)
         end
     end
 end
+
+% ========== 以下函数与原版本相同 ==========
 
 function stats = basic_statistics_analysis(data)
     % 1. 基础统计分析
