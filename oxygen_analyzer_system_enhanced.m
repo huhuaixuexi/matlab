@@ -262,13 +262,13 @@ if config.enable_visualization
      ax1.GridColor = [0.8 0.8 0.8];
      ax1.MinorGridColor = [0.9 0.9 0.9];
      
-     % 设置初始时间轴范围
+     % 设置初始时间轴范围 - 使用datenum转换为数值
      initial_time = config.start_time;
-     xlim(ax1, [initial_time, initial_time + hours(1)]);
+     xlim(ax1, [datenum(initial_time), datenum(initial_time + hours(1))]);
      ylim([-0.5, 10.5]);
      
      % 设置时间轴格式
-     ax1.XAxis.TickLabelFormat = 'HH:mm';
+     datetick(ax1, 'x', 'HH:MM', 'keepticks');
      
      % === 右侧数据窗口 ===
      buffer_panel = uipanel('Parent', main_panel, ...
@@ -499,42 +499,51 @@ for i = 1:total_samples
          window_start = max(1, i - window_size + 1);
          window_data = oxygen_values(window_start:i);
          
-         % 计算对应的实际时间
+         % 计算对应的实际时间并转换为数值
          window_datetime = config.start_time + seconds((window_start-1:i-1) * config.sample_interval);
          current_datetime = config.start_time + seconds((i-1) * config.sample_interval);
          
-         set(h_line, 'XData', window_datetime, 'YData', window_data);
-         set(h_current, 'XData', current_datetime, 'YData', window_data(end));
+         % 转换为datenum格式用于绘图
+         window_datenum = datenum(window_datetime);
+         current_datenum = datenum(current_datetime);
+         
+         set(h_line, 'XData', window_datenum, 'YData', window_data);
+         set(h_current, 'XData', current_datenum, 'YData', window_data(end));
          
          % 更新异常点 - 使用实际时间
          if ~isempty(alarm_datetime)
              % 只显示当前窗口范围内的报警点
              recent_mask = alarm_datetime >= window_datetime(1) & alarm_datetime <= window_datetime(end);
              if any(recent_mask)
-                 set(h_alarm_points, 'XData', alarm_datetime(recent_mask), ...
+                 % 转换报警时间为datenum格式
+                 alarm_datenum = datenum(alarm_datetime(recent_mask));
+                 set(h_alarm_points, 'XData', alarm_datenum, ...
                                    'YData', alarm_values(recent_mask));
              else
                  set(h_alarm_points, 'XData', NaN, 'YData', NaN);
              end
          end
          
-         % 设置X轴范围 - 显示最近1小时
-         xlim(ax1, [window_datetime(1), window_datetime(end) + minutes(5)]);
+         % 设置X轴范围 - 显示最近1小时，转换为datenum
+         xlim(ax1, [datenum(window_datetime(1)), datenum(window_datetime(end) + minutes(5))]);
          
          % 设置时间轴刻度 - 每小时一个主刻度
          time_range = window_datetime(end) - window_datetime(1);
          if time_range <= hours(1)
              % 小于等于1小时：每15分钟一个刻度
-             ax1.XAxis.TickLabelFormat = 'HH:mm';
-             xticks(ax1, window_datetime(1):minutes(15):window_datetime(end));
+             tick_times = window_datetime(1):minutes(15):window_datetime(end);
+             xticks(ax1, datenum(tick_times));
+             datetick(ax1, 'x', 'HH:MM', 'keepticks');
          elseif time_range <= hours(6)
              % 1-6小时：每30分钟一个刻度
-             ax1.XAxis.TickLabelFormat = 'HH:mm';
-             xticks(ax1, window_datetime(1):minutes(30):window_datetime(end));
+             tick_times = window_datetime(1):minutes(30):window_datetime(end);
+             xticks(ax1, datenum(tick_times));
+             datetick(ax1, 'x', 'HH:MM', 'keepticks');
          else
              % 超过6小时：每小时一个刻度
-             ax1.XAxis.TickLabelFormat = 'HH:mm';
-             xticks(ax1, window_datetime(1):hours(1):window_datetime(end));
+             tick_times = window_datetime(1):hours(1):window_datetime(end);
+             xticks(ax1, datenum(tick_times));
+             datetick(ax1, 'x', 'HH:MM', 'keepticks');
          end
          
          % 更新1小时窗口
