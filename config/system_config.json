@@ -1,0 +1,51 @@
+{
+  "system": {
+    "updateInterval": 1.0,
+    "displayPoints": 100,
+    "bufferSize": 1000
+  },
+  "collectors": {
+    "network": {
+      "enabled": true,
+      "ipAddress": "192.168.1.100",
+      "port": 5025,
+      "timeout": 5,
+      "dataFormat": "ASCII",
+      "parsePattern": "(?<value>[\\d.]+)\\s*%?\\s*O2"
+    },
+    "excel": {
+      "enabled": true,
+      "defaultFile": "data/excel/sample_oxygen_data.xlsx",
+      "timestampColumn": 1,
+      "valueColumn": 2,
+      "unitColumn": 3,
+      "qualityColumn": 4
+    },
+    "database": {
+      "enabled": false,
+      "type": "sqlite",
+      "connectionInfo": {
+        "filename": "data/oxygen_data.db"
+      },
+      "tableName": "oxygen_measurements",
+      "pollingInterval": 1
+    }
+  },
+  "display": {
+    "theme": "default",
+    "alarmLimits": {
+      "low": 18.0,
+      "high": 22.0
+    },
+    "colors": {
+      "normal": [0, 0.6, 0],
+      "warning": [0.8, 0.4, 0],
+      "alarm": [0.8, 0, 0]
+    }
+  },
+  "export": {
+    "defaultFormat": "xlsx",
+    "includeMetadata": true,
+    "timestampFormat": "yyyy-MM-dd HH:mm:ss"
+  }
+}
