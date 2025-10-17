@@ -180,6 +180,9 @@ periodic_alarm_control = struct();
 periodic_alarm_control.last_alarm_time = containers.Map();
 periodic_alarm_control.alarm_interval = 600;        % 10分钟 = 600秒
 
+% 设置全局字体
+set_global_font();
+
 % 初始化美化的可视化界面
 if config.enable_visualization
      % 获取屏幕大小
@@ -203,7 +206,7 @@ if config.enable_visualization
                            'BorderType', 'none');
      
      % 标题文本
-     uicontrol('Parent', header_panel, ...
+     title_text = uicontrol('Parent', header_panel, ...
               'Style', 'text', ...
               'String', '氧分析仪智能诊断维护系统', ...
               'Position', [20 10 400 40], ...
@@ -211,7 +214,19 @@ if config.enable_visualization
               'ForegroundColor', colors.light, ...
               'FontSize', 20, ...
               'FontWeight', 'bold', ...
+              'FontName', 'Microsoft YaHei', ...
               'HorizontalAlignment', 'left');
+     
+     % 确保字体正确设置
+     try
+         set(title_text, 'FontName', 'Microsoft YaHei');
+     catch
+         try
+             set(title_text, 'FontName', 'SimHei');
+         catch
+             set(title_text, 'FontName', 'default');
+         end
+     end
      
      % 状态指示器
      status_lamp = uicontrol('Parent', header_panel, ...
@@ -222,7 +237,19 @@ if config.enable_visualization
                             'ForegroundColor', colors.success, ...
                             'FontSize', 14, ...
                             'FontWeight', 'bold', ...
+                            'FontName', 'Microsoft YaHei', ...
                             'HorizontalAlignment', 'right');
+     
+     % 确保状态灯字体正确设置
+     try
+         set(status_lamp, 'FontName', 'Microsoft YaHei');
+     catch
+         try
+             set(status_lamp, 'FontName', 'SimHei');
+         catch
+             set(status_lamp, 'FontName', 'default');
+         end
+     end
      
      % 创建主要内容区域
      main_panel = uipanel('Parent', fig, ...
@@ -238,7 +265,19 @@ if config.enable_visualization
                             'TitlePosition', 'centertop', ...
                             'FontSize', 12, ...
                             'FontWeight', 'bold', ...
+                            'FontName', 'Microsoft YaHei', ...
                             'ForegroundColor', colors.primary);
+     
+     % 确保面板标题字体正确设置
+     try
+         set(monitor_panel, 'FontName', 'Microsoft YaHei');
+     catch
+         try
+             set(monitor_panel, 'FontName', 'SimHei');
+         catch
+             set(monitor_panel, 'FontName', 'default');
+         end
+     end
      
      % 实时数据图
      ax1 = axes('Parent', monitor_panel, 'Position', [0.1 0.15 0.85 0.75]);
@@ -274,7 +313,19 @@ if config.enable_visualization
                            'TitlePosition', 'centertop', ...
                            'FontSize', 12, ...
                            'FontWeight', 'bold', ...
+                           'FontName', 'Microsoft YaHei', ...
                            'ForegroundColor', colors.primary);
+     
+     % 确保面板标题字体正确设置
+     try
+         set(buffer_panel, 'FontName', 'Microsoft YaHei');
+     catch
+         try
+             set(buffer_panel, 'FontName', 'SimHei');
+         catch
+             set(buffer_panel, 'FontName', 'default');
+         end
+     end
      
      ax2 = axes('Parent', buffer_panel, 'Position', [0.1 0.15 0.85 0.75]);
      h_buffer = plot(NaN, NaN, '-', 'LineWidth', 1.5, 'Color', colors.secondary);
@@ -292,7 +343,19 @@ if config.enable_visualization
                           'TitlePosition', 'centertop', ...
                           'FontSize', 12, ...
                           'FontWeight', 'bold', ...
+                          'FontName', 'Microsoft YaHei', ...
                           'ForegroundColor', colors.primary);
+     
+     % 确保面板标题字体正确设置
+     try
+         set(stats_panel, 'FontName', 'Microsoft YaHei');
+     catch
+         try
+             set(stats_panel, 'FontName', 'SimHei');
+         catch
+             set(stats_panel, 'FontName', 'default');
+         end
+     end
      
      % 使用listbox替代text，实现可滚动查看
      h_stats_text = uicontrol('Parent', stats_panel, ...
@@ -301,12 +364,23 @@ if config.enable_visualization
                              'BackgroundColor', colors.light, ...
                              'ForegroundColor', colors.dark, ...
                              'FontSize', 9, ...
-                             'FontName', 'FixedWidth', ...
+                             'FontName', 'Microsoft YaHei', ...
                              'String', {'系统初始化中...'}, ...
                              'Max', 2, ...  % 允许多行显示
                              'Min', 0, ...  % 确保可以滚动
                              'Value', 1, ... % 初始选中第一行
                              'ListboxTop', 1); % 确保从第一行开始显示
+     
+     % 确保listbox字体正确设置
+     try
+         set(h_stats_text, 'FontName', 'Microsoft YaHei');
+     catch
+         try
+             set(h_stats_text, 'FontName', 'SimHei');
+         catch
+             set(h_stats_text, 'FontName', 'Courier New');
+         end
+     end
      
      % === 右下诊断日志 ===
      log_panel = uipanel('Parent', main_panel, ...
@@ -316,7 +390,19 @@ if config.enable_visualization
                         'TitlePosition', 'centertop', ...
                         'FontSize', 12, ...
                         'FontWeight', 'bold', ...
+                        'FontName', 'Microsoft YaHei', ...
                         'ForegroundColor', colors.primary);
+     
+     % 确保面板标题字体正确设置
+     try
+         set(log_panel, 'FontName', 'Microsoft YaHei');
+     catch
+         try
+             set(log_panel, 'FontName', 'SimHei');
+         catch
+             set(log_panel, 'FontName', 'default');
+         end
+     end
      
      h_log_text = uicontrol('Parent', log_panel, ...
                            'Style', 'listbox', ...
@@ -324,12 +410,23 @@ if config.enable_visualization
                            'BackgroundColor', colors.light, ...
                            'ForegroundColor', colors.dark, ...
                            'FontSize', 9, ...
-                           'FontName', 'FixedWidth', ...
+                           'FontName', 'Microsoft YaHei', ...
                            'String', {'等待诊断日志...'}, ...
                            'Max', 2, ...  % 允许多行显示
                            'Min', 0, ...  % 确保可以滚动
                            'Value', 1, ... % 初始选中第一行
                            'ListboxTop', 1); % 确保从第一行开始显示
+     
+     % 确保listbox字体正确设置
+     try
+         set(h_log_text, 'FontName', 'Microsoft YaHei');
+     catch
+         try
+             set(h_log_text, 'FontName', 'SimHei');
+         catch
+             set(h_log_text, 'FontName', 'Courier New');
+         end
+     end
      
      % === 底部维修建议区域 ===
      maint_panel = uipanel('Parent', main_panel, ...
@@ -339,7 +436,19 @@ if config.enable_visualization
                           'TitlePosition', 'centertop', ...
                           'FontSize', 12, ...
                           'FontWeight', 'bold', ...
+                          'FontName', 'Microsoft YaHei', ...
                           'ForegroundColor', colors.primary);
+     
+     % 确保面板标题字体正确设置
+     try
+         set(maint_panel, 'FontName', 'Microsoft YaHei');
+     catch
+         try
+             set(maint_panel, 'FontName', 'SimHei');
+         catch
+             set(maint_panel, 'FontName', 'default');
+         end
+     end
      
      % 使用可滚动的文本区域
      h_maintenance_text = uicontrol('Parent', maint_panel, ...
@@ -348,12 +457,23 @@ if config.enable_visualization
                                    'BackgroundColor', colors.light, ...
                                    'ForegroundColor', colors.dark, ...
                                    'FontSize', 9, ...
-                                   'FontName', 'FixedWidth', ...
+                                   'FontName', 'Microsoft YaHei', ...
                                    'String', {'等待故障诊断...'}, ...
                                    'Max', 2, ...  % 允许多行显示
                                    'Min', 0, ...  % 确保可以滚动
                                    'Value', 1, ... % 初始选中第一行
                                    'ListboxTop', 1); % 确保从第一行开始显示
+     
+     % 确保listbox字体正确设置
+     try
+         set(h_maintenance_text, 'FontName', 'Microsoft YaHei');
+     catch
+         try
+             set(h_maintenance_text, 'FontName', 'SimHei');
+         catch
+             set(h_maintenance_text, 'FontName', 'Courier New');
+         end
+     end
      
      % 创建进度条
      progress_panel = uipanel('Parent', main_panel, ...
@@ -1517,4 +1637,51 @@ function db = init_maintenance_database()
             create_measure(4, '紧固接头', '20分钟', '扳手')
             create_measure(5, '重装气路', '3小时', '全套管路')
         ]);
+end
+
+%% ========================================
+%% 字体设置函数
+%% ========================================
+
+% 设置全局字体函数
+function set_global_font()
+    % 尝试设置支持中文的字体
+    try
+        % 首先尝试微软雅黑
+        set(0, 'DefaultUicontrolFontName', 'Microsoft YaHei');
+        set(0, 'DefaultUipanelFontName', 'Microsoft YaHei');
+        set(0, 'DefaultTextFontName', 'Microsoft YaHei');
+        set(0, 'DefaultAxesFontName', 'Microsoft YaHei');
+    catch
+        try
+            % 如果微软雅黑不可用，尝试黑体
+            set(0, 'DefaultUicontrolFontName', 'SimHei');
+            set(0, 'DefaultUipanelFontName', 'SimHei');
+            set(0, 'DefaultTextFontName', 'SimHei');
+            set(0, 'DefaultAxesFontName', 'SimHei');
+        catch
+            try
+                % 如果黑体不可用，尝试宋体
+                set(0, 'DefaultUicontrolFontName', 'SimSun');
+                set(0, 'DefaultUipanelFontName', 'SimSun');
+                set(0, 'DefaultTextFontName', 'SimSun');
+                set(0, 'DefaultAxesFontName', 'SimSun');
+            catch
+                % 如果都不可用，使用系统默认字体
+                warning('无法设置中文字体，使用系统默认字体');
+            end
+        end
+    end
+    
+    % 设置字符编码
+    try
+        feature('DefaultCharacterSet', 'UTF-8');
+    catch
+        % 如果UTF-8不支持，尝试GBK
+        try
+            feature('DefaultCharacterSet', 'GBK');
+        catch
+            warning('字符编码设置失败');
+        end
+    end
 end      
