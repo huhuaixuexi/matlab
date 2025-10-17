@@ -1,9 +1,9 @@
-%% 故障诊断维修记录分析系统 - MATLAB 版本（优化版）
+%% 故障诊断维修记录分析系统 - MATLAB 版本（修复版）
 % 读取 Excel 文件中的故障记录并进行全面分析
 % 生成优化的可视化报告和文字分析报告
-% 优化内容：字体设置（中文宋体，英文Times New Roman），图表布局优化
+% 修复版：解决subplot位置错误，使用标准布局
 
-function analyze_fault_records_v3_optimized(excel_file)
+function analyze_fault_records_v3_fixed(excel_file)
     % 主函数 - 分析故障记录
 
     % 如果没有指定文件，选择最新的 Excel 文件
@@ -20,7 +20,7 @@ function analyze_fault_records_v3_optimized(excel_file)
     setup_optimized_fonts();
 
     fprintf('\n========================================\n');
-    fprintf('故障诊断维修记录分析系统（优化版）\n');
+    fprintf('故障诊断维修记录分析系统（修复版）\n');
     fprintf('分析时间: %s\n', datestr(now, 'yyyy-mm-dd HH:MM:SS'));
     fprintf('========================================\n\n');
 
@@ -69,14 +69,14 @@ function analyze_fault_records_v3_optimized(excel_file)
     predictive_stats = predictive_analysis(data);
 
     % 6. 生成优化的可视化报告
-    generate_optimized_comprehensive_report(data, basic_stats, efficiency_stats, ...
+    generate_fixed_comprehensive_report(data, basic_stats, efficiency_stats, ...
         pattern_stats, correlation_stats, predictive_stats);
 
     % 7. 生成文字报告
     generate_summary_report(data, basic_stats, efficiency_stats, pattern_stats, excel_file);
 
     fprintf('\n========================================\n');
-    fprintf('分析完成！已生成优化版可视化报告。\n');
+    fprintf('分析完成！已生成修复版可视化报告。\n');
     fprintf('========================================\n');
 end
 
@@ -726,71 +726,30 @@ function stats = predictive_analysis(data)
     return;
 end
 
-function create_subplot_with_margins(m, n, p, margins)
-    % 创建带边距的子图
-    if length(p) > 1
-        % 处理跨多个位置的子图（如 [5, 6]）
-        min_p = min(p);
-        max_p = max(p);
-        
-        % 计算起始位置
-        start_row = floor((min_p-1)/n);
-        start_col = mod(min_p-1, n);
-        
-        % 计算结束位置
-        end_row = floor((max_p-1)/n);
-        end_col = mod(max_p-1, n);
-        
-        % 计算位置和大小
-        left = margins(1) + start_col*(1-margins(1)-margins(3))/n;
-        bottom = margins(2) + (m-1-end_row)*(1-margins(2)-margins(4))/m;
-        width = (end_col - start_col + 1)*(1-margins(1)-margins(3))/n - margins(1)/2;
-        height = (end_row - start_row + 1)*(1-margins(2)-margins(4))/m - margins(2)/2;
-        
-        subplot('Position', [left, bottom, width, height]);
-    else
-        % 单个位置的子图
-        row = floor((p-1)/n);
-        col = mod(p-1, n);
-        
-        left = margins(1) + col*(1-margins(1)-margins(3))/n;
-        bottom = margins(2) + (m-1-row)*(1-margins(2)-margins(4))/m;
-        width = (1-margins(1)-margins(3))/n - margins(1)/2;
-        height = (1-margins(2)-margins(4))/m - margins(2)/2;
-        
-        subplot('Position', [left, bottom, width, height]);
-    end
-end
-
-function generate_optimized_comprehensive_report(data, basic_stats, efficiency_stats, ...
+function generate_fixed_comprehensive_report(data, basic_stats, efficiency_stats, ...
     pattern_stats, correlation_stats, predictive_stats)
-    % 生成优化的综合可视化报告
+    % 生成修复版综合可视化报告
 
     fprintf('\n');
     fprintf('==================================================\n');
-    fprintf('6. 生成优化可视化报告\n');
+    fprintf('6. 生成修复版可视化报告\n');
     fprintf('==================================================\n');
 
-    % ========== 第 1 页：基础统计和分布（优化版） ==========
+    % ========== 第 1 页：基础统计和分布（修复版） ==========
     
-    fig1 = figure('Name', '故障分析综合报告 - 第1页（优化版）', ...
+    fig1 = figure('Name', '故障分析综合报告 - 第1页（修复版）', ...
         'Position', [50, 50, 1500, 1000], ...
         'Color', 'white');
 
-    % 调整子图间距，防止标题重叠
-    subplot_tight = @(m,n,p,margins) create_subplot_with_margins(m,n,p,margins);
-    
-    margins = [0.08, 0.12, 0.05, 0.08]; % [left, bottom, right, top]
-
     % 1. 故障类型分布饼图
-    create_subplot_with_margins(2, 3, 1, margins);
+    subplot(2, 3, 1);
     type_data = basic_stats.type_counts;
     pie([type_data{:, 2}]);
-    title('故障类型分布', 'FontSize', 13, 'FontWeight', 'bold', 'Margin', 5);
+    title('故障类型分布', 'FontSize', 13, 'FontWeight', 'bold');
     legend(type_data(:, 1), 'Location', 'eastoutside', 'FontSize', 9);
 
     % 2. 月度故障趋势图
-    create_subplot_with_margins(2, 3, 2, margins);
+    subplot(2, 3, 2);
     monthly_data = predictive_stats.monthly_faults;
     plot(monthly_data.months, monthly_data.counts, 'b-o', 'LineWidth', 2, 'MarkerSize', 5);
     hold on;
@@ -801,7 +760,7 @@ function generate_optimized_comprehensive_report(data, basic_stats, efficiency_s
     trend_line = polyval(p, X);
     plot(monthly_data.months, trend_line, 'r--', 'LineWidth', 1.5);
     hold off;
-    title('月度故障趋势图', 'FontSize', 13, 'FontWeight', 'bold', 'Margin', 5);
+    title('月度故障趋势图', 'FontSize', 13, 'FontWeight', 'bold');
     xlabel('时间', 'FontSize', 11, 'FontWeight', 'bold');
     ylabel('故障数量（次）', 'FontSize', 11, 'FontWeight', 'bold');
     legend({'实际数据', '趋势线'}, 'Location', 'best', 'FontSize', 9);
@@ -810,7 +769,7 @@ function generate_optimized_comprehensive_report(data, basic_stats, efficiency_s
     xtickangle(45);
 
     % 3. 严重程度分布条形图
-    create_subplot_with_margins(2, 3, 3, margins);
+    subplot(2, 3, 3);
     severity_data = pattern_stats.severity_counts;
     severity_colors = [1 0.2 0.2; 1 0.6 0; 1 1 0]; % 红、橙、黄
     bar_data = [severity_data{:, 2}];
@@ -822,7 +781,7 @@ function generate_optimized_comprehensive_report(data, basic_stats, efficiency_s
     end
 
     set(gca, 'XTickLabel', severity_data(:, 1));
-    title('故障严重程度分布', 'FontSize', 13, 'FontWeight', 'bold', 'Margin', 5);
+    title('故障严重程度分布', 'FontSize', 13, 'FontWeight', 'bold');
     xlabel('严重程度', 'FontSize', 11, 'FontWeight', 'bold');
     ylabel('故障数量（次）', 'FontSize', 11, 'FontWeight', 'bold');
 
@@ -837,19 +796,19 @@ function generate_optimized_comprehensive_report(data, basic_stats, efficiency_s
     ylim([0, max(bar_data)*1.15]);
 
     % 4. TOP10 故障代码
-    create_subplot_with_margins(2, 3, 4, margins);
+    subplot(2, 3, 4);
     fault_data = basic_stats.fault_counts;
     top10_codes = fault_data(1:min(10, size(fault_data, 1)), :);
     barh([top10_codes{:, 2}], 'FaceColor', [0.3 0.6 0.8]);
     set(gca, 'YTick', 1:size(top10_codes, 1));
     set(gca, 'YTickLabel', top10_codes(:, 1));
-    title('TOP 10 故障代码', 'FontSize', 13, 'FontWeight', 'bold', 'Margin', 5);
+    title('TOP 10 故障代码', 'FontSize', 13, 'FontWeight', 'bold');
     xlabel('故障发生次数', 'FontSize', 11, 'FontWeight', 'bold');
     ylabel('故障代码', 'FontSize', 11, 'FontWeight', 'bold');
     grid on;
 
     % 5. 数据故障类型分布
-    create_subplot_with_margins(2, 3, 5, margins);
+    subplot(2, 3, 5);
     [unique_data_faults, ~, idx] = unique(data.data_fault_main);
     data_fault_counts = accumarray(idx, 1);
 
@@ -870,13 +829,13 @@ function generate_optimized_comprehensive_report(data, basic_stats, efficiency_s
     end
 
     pie(data_fault_counts, data_fault_labels);
-    title('数据故障类型分布', 'FontSize', 13, 'FontWeight', 'bold', 'Margin', 5);
+    title('数据故障类型分布', 'FontSize', 13, 'FontWeight', 'bold');
 
     % 6. 年度故障统计
-    create_subplot_with_margins(2, 3, 6, margins);
+    subplot(2, 3, 6);
     yearly_data = basic_stats.yearly_counts;
     bar(yearly_data.years, yearly_data.counts, 'FaceColor', [0.5 0.8 0.5]);
-    title('年度故障统计', 'FontSize', 13, 'FontWeight', 'bold', 'Margin', 5);
+    title('年度故障统计', 'FontSize', 13, 'FontWeight', 'bold');
     xlabel('年份', 'FontSize', 11, 'FontWeight', 'bold');
     ylabel('故障数量（次）', 'FontSize', 11, 'FontWeight', 'bold');
     grid on;
@@ -892,17 +851,17 @@ function generate_optimized_comprehensive_report(data, basic_stats, efficiency_s
     ylim([0, max(yearly_data.counts)*1.15]);
 
     % 添加总标题
-    sgtitle('故障诊断维修记录分析报告 - 基础统计（优化版）', ...
+    sgtitle('故障诊断维修记录分析报告 - 基础统计（修复版）', ...
         'FontSize', 16, 'FontWeight', 'bold');
 
-    % ========== 第 2 页：维修效率和模式分析（优化版） ==========
+    % ========== 第 2 页：维修效率和模式分析（修复版） ==========
 
-    fig2 = figure('Name', '故障分析综合报告 - 第2页（优化版）', ...
+    fig2 = figure('Name', '故障分析综合报告 - 第2页（修复版）', ...
         'Position', [100, 50, 1500, 1000], ...
         'Color', 'white');
 
     % 1. 维修时间分布（各故障类型）
-    create_subplot_with_margins(2, 3, 1, margins);
+    subplot(2, 3, 1);
     type_time_data = efficiency_stats.type_time_stats;
     type_names = type_time_data(:, 1);
     avg_times = [type_time_data{:, 2}];
@@ -920,31 +879,31 @@ function generate_optimized_comprehensive_report(data, basic_stats, efficiency_s
 
     set(gca, 'XTick', 1:length(type_names));
     set(gca, 'XTickLabel', type_names);
-    title('各故障类型平均维修时间', 'FontSize', 13, 'FontWeight', 'bold', 'Margin', 5);
+    title('各故障类型平均维修时间', 'FontSize', 13, 'FontWeight', 'bold');
     xlabel('故障类型', 'FontSize', 11, 'FontWeight', 'bold');
     ylabel('维修时间（分钟）', 'FontSize', 11, 'FontWeight', 'bold');
     xtickangle(45);
     grid on;
 
     % 2. 工具使用频率 TOP10
-    create_subplot_with_margins(2, 3, 2, margins);
+    subplot(2, 3, 2);
     tools_data = efficiency_stats.tools_freq;
     top10_tools = tools_data(1:min(10, size(tools_data, 1)), :);
     barh([top10_tools{:, 2}], 'FaceColor', [0.9 0.7 0.5]);
     set(gca, 'YTick', 1:size(top10_tools, 1));
     set(gca, 'YTickLabel', top10_tools(:, 1));
-    title('TOP 10 常用工具', 'FontSize', 13, 'FontWeight', 'bold', 'Margin', 5);
+    title('TOP 10 常用工具', 'FontSize', 13, 'FontWeight', 'bold');
     xlabel('使用次数', 'FontSize', 11, 'FontWeight', 'bold');
     ylabel('工具名称', 'FontSize', 11, 'FontWeight', 'bold');
     grid on;
 
     % 3. 季度故障分布
-    create_subplot_with_margins(2, 3, 3, margins);
+    subplot(2, 3, 3);
     seasonal_data = pattern_stats.seasonal_counts;
     bar(seasonal_data.quarters, seasonal_data.counts, 'FaceColor', [0.8 0.8 0.3]);
     set(gca, 'XTick', 1:4);
     set(gca, 'XTickLabel', {'春季(Q1)', '夏季(Q2)', '秋季(Q3)', '冬季(Q4)'});
-    title('季度故障分布', 'FontSize', 13, 'FontWeight', 'bold', 'Margin', 5);
+    title('季度故障分布', 'FontSize', 13, 'FontWeight', 'bold');
     xlabel('季度', 'FontSize', 11, 'FontWeight', 'bold');
     ylabel('故障数量（次）', 'FontSize', 11, 'FontWeight', 'bold');
     grid on;
@@ -960,7 +919,7 @@ function generate_optimized_comprehensive_report(data, basic_stats, efficiency_s
     ylim([0, max(seasonal_data.counts)*1.15]);
 
     % 4. 优先级分布
-    create_subplot_with_margins(2, 3, 4, margins);
+    subplot(2, 3, 4);
     priority_data = pattern_stats.priority_counts;
     pie_data = priority_data.counts;
     pie_labels = arrayfun(@(x) sprintf('优先级 %d\n(%d 次)', x, ...
@@ -968,21 +927,21 @@ function generate_optimized_comprehensive_report(data, basic_stats, efficiency_s
         priority_data.priorities, 'UniformOutput', false);
 
     pie(pie_data, pie_labels);
-    title('故障优先级分布', 'FontSize', 13, 'FontWeight', 'bold', 'Margin', 5);
+    title('故障优先级分布', 'FontSize', 13, 'FontWeight', 'bold');
     colormap(gca, [1 0.3 0.3; 1 0.7 0.3; 0.3 0.8 0.3]);
 
     % 5. 工作日 vs 周末分布
-    create_subplot_with_margins(2, 3, 5, margins);
+    subplot(2, 3, 5);
     workday_data = pattern_stats.workday_counts;
     pie_data = workday_data;
     pie_labels = {sprintf('工作日\n%d 次', workday_data(1)), ...
                   sprintf('周末\n%d 次', workday_data(2))};
     pie(pie_data, pie_labels);
-    title('工作日 vs 周末故障分布', 'FontSize', 13, 'FontWeight', 'bold', 'Margin', 5);
+    title('工作日 vs 周末故障分布', 'FontSize', 13, 'FontWeight', 'bold');
     colormap(gca, [0.7 0.7 0.9; 0.9 0.7 0.7]);
 
     % 6. 故障时间热力图
-    create_subplot_with_margins(2, 3, 6, margins);
+    subplot(2, 3, 6);
     heatmap_data = zeros(7, 24);
     for i = 1:length(data.dayofweek)
         dow = data.dayofweek(i);
@@ -1001,27 +960,27 @@ function generate_optimized_comprehensive_report(data, basic_stats, efficiency_s
     set(gca, 'XTick', [1, 6, 12, 18, 24]);
     set(gca, 'XTickLabel', {'0', '5', '11', '17', '23'});
 
-    title('故障发生时间分布热力图', 'FontSize', 13, 'FontWeight', 'bold', 'Margin', 5);
+    title('故障发生时间分布热力图', 'FontSize', 13, 'FontWeight', 'bold');
     xlabel('小时（0-23点）', 'FontSize', 11, 'FontWeight', 'bold');
     ylabel('星期', 'FontSize', 11, 'FontWeight', 'bold');
 
     % 添加总标题
-    sgtitle('故障诊断维修记录分析报告 - 维修效率与模式（优化版）', ...
+    sgtitle('故障诊断维修记录分析报告 - 维修效率与模式（修复版）', ...
         'FontSize', 16, 'FontWeight', 'bold');
 
-    % ========== 第 3 页：关联分析和预测（优化版） ==========
+    % ========== 第 3 页：关联分析和预测（修复版） ==========
 
-    fig3 = figure('Name', '故障分析综合报告 - 第3页（优化版）', ...
+    fig3 = figure('Name', '故障分析综合报告 - 第3页（修复版）', ...
         'Position', [150, 50, 1500, 1000], ...
         'Color', 'white');
 
     % 1. 严重程度与维修时间关系
-    create_subplot_with_margins(2, 3, 1, margins);
+    subplot(2, 3, 1);
     severity_time_data = correlation_stats.severity_time;
     bar_data = [severity_time_data{:, 2}];
     bar(bar_data, 'FaceColor', [0.8 0.6 0.8]);
     set(gca, 'XTickLabel', severity_time_data(:, 1));
-    title('严重程度与平均维修时间', 'FontSize', 13, 'FontWeight', 'bold', 'Margin', 5);
+    title('严重程度与平均维修时间', 'FontSize', 13, 'FontWeight', 'bold');
     xlabel('严重程度', 'FontSize', 11, 'FontWeight', 'bold');
     ylabel('平均维修时间（分钟）', 'FontSize', 11, 'FontWeight', 'bold');
     grid on;
@@ -1036,7 +995,7 @@ function generate_optimized_comprehensive_report(data, basic_stats, efficiency_s
     ylim([0, max(bar_data)*1.15]);
 
     % 2. 最复杂故障 TOP5
-    create_subplot_with_margins(2, 3, 2, margins);
+    subplot(2, 3, 2);
     complexity_data = correlation_stats.fault_complexity;
     top5_complex = complexity_data(1:min(5, size(complexity_data, 1)), :);
     barh([top5_complex{:, 2}], 'FaceColor', [0.9 0.5 0.5]);
@@ -1049,13 +1008,13 @@ function generate_optimized_comprehensive_report(data, basic_stats, efficiency_s
 
     set(gca, 'YTick', 1:length(ylabels));
     set(gca, 'YTickLabel', ylabels);
-    title('最复杂故障 TOP5', 'FontSize', 13, 'FontWeight', 'bold', 'Margin', 5);
+    title('最复杂故障 TOP5', 'FontSize', 13, 'FontWeight', 'bold');
     xlabel('平均维修时间（分钟）', 'FontSize', 11, 'FontWeight', 'bold');
     ylabel('故障代码', 'FontSize', 11, 'FontWeight', 'bold');
     grid on;
 
     % 3. 故障趋势预测
-    create_subplot_with_margins(2, 3, 3, margins);
+    subplot(2, 3, 3);
     monthly_data = predictive_stats.monthly_faults;
     plot(monthly_data.months, monthly_data.counts, 'b-o', ...
         'LineWidth', 2, 'MarkerSize', 5);
@@ -1067,7 +1026,7 @@ function generate_optimized_comprehensive_report(data, basic_stats, efficiency_s
     plot(future_months, predictions, 'r--o', ...
         'LineWidth', 2, 'MarkerSize', 5);
 
-    title('故障趋势与预测', 'FontSize', 13, 'FontWeight', 'bold', 'Margin', 5);
+    title('故障趋势与预测', 'FontSize', 13, 'FontWeight', 'bold');
     xlabel('时间', 'FontSize', 11, 'FontWeight', 'bold');
     ylabel('故障数量（次）', 'FontSize', 11, 'FontWeight', 'bold');
     legend({'历史数据', '预测数据'}, 'Location', 'best', 'FontSize', 9);
@@ -1077,7 +1036,7 @@ function generate_optimized_comprehensive_report(data, basic_stats, efficiency_s
     hold off;
 
     % 4. 备件需求分析
-    create_subplot_with_margins(2, 3, 4, margins);
+    subplot(2, 3, 4);
     parts_data = predictive_stats.parts_freq;
     parts_names = {'传感器', '电路板', '模块', '电缆'};
     parts_counts = [parts_data.sensor, parts_data.board, ...
@@ -1085,7 +1044,7 @@ function generate_optimized_comprehensive_report(data, basic_stats, efficiency_s
 
     bar(parts_counts, 'FaceColor', [0.6 0.8 0.6]);
     set(gca, 'XTickLabel', parts_names);
-    title('备件更换统计', 'FontSize', 13, 'FontWeight', 'bold', 'Margin', 5);
+    title('备件更换统计', 'FontSize', 13, 'FontWeight', 'bold');
     xlabel('备件类型', 'FontSize', 11, 'FontWeight', 'bold');
     ylabel('更换次数', 'FontSize', 11, 'FontWeight', 'bold');
     grid on;
@@ -1099,56 +1058,64 @@ function generate_optimized_comprehensive_report(data, basic_stats, efficiency_s
     end
     ylim([0, max(parts_counts)*1.15]);
 
-    % 5-6. 维修操作效率分析（跨两个子图位置）
-    create_subplot_with_margins(2, 3, [5, 6], margins);
+    % 5. 维修操作效率分析（单个子图）
+    subplot(2, 3, 5);
     op_data = efficiency_stats.operation_stats;
     % 筛选出现 2 次以上的操作
     freq_ops = op_data([op_data{:, 2}] >= 2, :);
     if ~isempty(freq_ops)
-        % 按平均时间排序
+        % 按平均时间排序，取前5个
         [~, sort_idx] = sort([freq_ops{:, 3}]);
-        top10_ops = freq_ops(sort_idx(1:min(10, length(sort_idx))), :);
+        top5_ops = freq_ops(sort_idx(1:min(5, length(sort_idx))), :);
 
-        x_data = [top10_ops{:, 3}];
+        x_data = [top5_ops{:, 3}];
         y_pos = 1:length(x_data);
 
         barh(y_pos, x_data, 'FaceColor', [0.7 0.9 0.7]);
 
         % 设置标签
-        op_labels = cell(size(top10_ops, 1), 1);
-        for i = 1:size(top10_ops, 1)
+        op_labels = cell(size(top5_ops, 1), 1);
+        for i = 1:size(top5_ops, 1)
             op_labels{i} = sprintf('%s (n=%d)', ...
-                top10_ops{i, 1}, top10_ops{i, 2});
+                top5_ops{i, 1}, top5_ops{i, 2});
         end
 
         set(gca, 'YTick', y_pos);
         set(gca, 'YTickLabel', op_labels);
-        title('TOP 10 最快维修操作', 'FontSize', 13, 'FontWeight', 'bold', 'Margin', 5);
+        title('TOP 5 最快维修操作', 'FontSize', 13, 'FontWeight', 'bold');
         xlabel('平均维修时间（分钟）', 'FontSize', 11, 'FontWeight', 'bold');
         ylabel('维修操作（含次数）', 'FontSize', 11, 'FontWeight', 'bold');
         grid on;
     end
 
+    % 6. 维修工具效率分析
+    subplot(2, 3, 6);
+    tools_data = efficiency_stats.tools_freq;
+    top5_tools = tools_data(1:min(5, size(tools_data, 1)), :);
+    pie([top5_tools{:, 2}], top5_tools(:, 1));
+    title('TOP 5 常用工具分布', 'FontSize', 13, 'FontWeight', 'bold');
+
     % 添加总标题
-    sgtitle('故障诊断维修记录分析报告 - 关联分析与预测（优化版）', ...
+    sgtitle('故障诊断维修记录分析报告 - 关联分析与预测（修复版）', ...
         'FontSize', 16, 'FontWeight', 'bold');
 
-    fprintf('\n优化版可视化报告已生成，共 3 个图形窗口。\n');
-    fprintf('优化内容：\n');
+    fprintf('\n修复版可视化报告已生成，共 3 个图形窗口。\n');
+    fprintf('修复内容：\n');
+    fprintf('- 使用标准subplot函数，避免位置计算错误\n');
     fprintf('- 字体：中文宋体，英文Times New Roman\n');
-    fprintf('- 布局：调整子图间距，防止标题重叠\n');
+    fprintf('- 布局：合理的图表间距，防止重叠\n');
     fprintf('- 标签：优化数值标签位置和大小\n');
     fprintf('- 颜色：统一配色方案\n');
 end
 
 function generate_summary_report(data, basic_stats, efficiency_stats, pattern_stats, excel_file)
     % 生成文字总结报告
-    report_filename = sprintf('故障分析总结报告_优化版_%s.txt', datestr(now, 'yyyymmdd_HHMMSS'));
+    report_filename = sprintf('故障分析总结报告_修复版_%s.txt', datestr(now, 'yyyymmdd_HHMMSS'));
 
     fid = fopen(report_filename, 'w', 'native', 'UTF-8');
 
     fprintf(fid, '======================================================================\n');
-    fprintf(fid, '故障诊断维修记录分析总结报告（优化版）\n');
+    fprintf(fid, '故障诊断维修记录分析总结报告（修复版）\n');
     fprintf(fid, '生成时间: %s\n', datestr(now, 'yyyy-mm-dd HH:MM:SS'));
     fprintf(fid, '分析文件: %s\n', excel_file);
     fprintf(fid, '======================================================================\n\n');
@@ -1207,8 +1174,17 @@ function generate_summary_report(data, basic_stats, efficiency_stats, pattern_st
             severity_data{i, 2} / length(data.fault_time) * 100);
     end
 
-    % 优化建议
-    fprintf(fid, '\n【优化建议】\n');
+    % 修复版说明
+    fprintf(fid, '\n【修复版说明】\n');
+    fprintf(fid, '本次修复版报告改进内容:\n');
+    fprintf(fid, '1. 修复了subplot位置计算错误\n');
+    fprintf(fid, '2. 使用标准subplot函数，提高兼容性\n');
+    fprintf(fid, '3. 字体优化: 中文采用宋体，英文采用Times New Roman\n');
+    fprintf(fid, '4. 布局优化: 合理的图表间距，防止标题覆盖\n');
+    fprintf(fid, '5. 标签优化: 改进数值标签位置和字体大小\n');
+    fprintf(fid, '6. 颜色优化: 统一配色方案，提高可读性\n');
+
+    fprintf(fid, '\n【改进建议】\n');
     fprintf(fid, '1. 重点关注高频故障的预防性维护\n');
     fprintf(fid, '   - 建议对"%s"制定专项维护计划\n', top_fault_name);
     fprintf(fid, '2. 优化备件库存管理\n');
@@ -1219,15 +1195,6 @@ function generate_summary_report(data, basic_stats, efficiency_stats, pattern_st
     fprintf(fid, '   - 加强维修人员培训，缩短平均维修时间\n');
     fprintf(fid, '5. 建立预警机制\n');
     fprintf(fid, '   - 对高优先级故障建立早期预警系统\n');
-
-    % 报告优化说明
-    fprintf(fid, '\n【报告优化说明】\n');
-    fprintf(fid, '本次优化版报告改进内容:\n');
-    fprintf(fid, '1. 字体优化: 中文采用宋体，英文采用Times New Roman\n');
-    fprintf(fid, '2. 布局优化: 调整子图间距，防止标题覆盖图片内容\n');
-    fprintf(fid, '3. 标签优化: 改进数值标签位置和字体大小\n');
-    fprintf(fid, '4. 颜色优化: 统一配色方案，提高可读性\n');
-    fprintf(fid, '5. 间距优化: 增加图表间距，避免重叠问题\n');
 
     fprintf(fid, '\n【数据质量】\n');
     fprintf(fid, '数据完整性: 100%%\n');
@@ -1246,5 +1213,5 @@ function generate_summary_report(data, basic_stats, efficiency_stats, pattern_st
 
     fclose(fid);
 
-    fprintf('\n优化版文字总结报告已保存: %s\n', report_filename);
+    fprintf('\n修复版文字总结报告已保存: %s\n', report_filename);
 end
