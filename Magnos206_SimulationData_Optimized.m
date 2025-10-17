@@ -1,6 +1,6 @@
 % Magnos206磁力机械氧分析仪模拟数据生成器
-% 生成9天数据（每天前半天正常+后半天异常），保存至Excel文件
-% 增加数据保持功能：前半天最后一个数据在后半天保持不变
+% 生成10种类型数据（每种类型前半天正常+后半天异常），保存至Excel文件
+% 包含数据保持功能：前半天最后一个数据在后半天保持不变
 
 clear; clc;
 
@@ -29,7 +29,7 @@ hours = floor(time_stamps_hours);
 minutes = floor((time_stamps_hours - hours) * 60);
 time_strings = arrayfun(@(h, m) sprintf('%02d:%02d', h, m), hours, minutes, 'UniformOutput', false);
 
-%% 二、生成各天数据
+%% 二、生成各类型数据
 
 fprintf('========================================\n');
 fprintf('开始生成Magnos206氧分析仪10种类型模拟数据\n');
@@ -41,7 +41,7 @@ normal_std = normal_mean * normal_fluctuation / 3;
 severe_std = normal_mean * severe_fluctuation / 3;
 
 %% 新增数据保持功能
-% 第10天：前半天正常 + 后半天数据保持
+% 数据保持类型：前半天正常 + 后半天数据保持
 fprintf('[1/10] 正在生成数据保持：前半天正常 + 后半天保持最后值...\n');
 % 前半天正常数据
 first_half_hold = normal_mean + normal_std * randn(points_per_half, 1);
@@ -53,12 +53,12 @@ second_half_hold = ones(points_per_half, 1) * last_value;
 
 day_hold_data = [first_half_hold; second_half_hold];
 
-%% 1. Sheet1: 第1天 - 全天正常
+%% 1. 全天正常
 fprintf('[2/10] 正在生成全天正常数据...\n');
 day1_data = normal_mean + normal_std * randn(num_points, 1);
 day1_data = max(range_min, min(range_max, day1_data));
 
-%% 2. Sheet2: 第2天 - 前半天正常 + 后半天小幅度正向偏移（逐渐偏移）
+%% 2. 小幅度正向偏移 - 前半天正常 + 后半天小幅度正向偏移（逐渐偏移）
 fprintf('[3/10] 正在生成小幅度正向偏移数据：前半天正常 + 后半天偏移...\n');
 % 前半天正常数据
 first_half = normal_mean + normal_std * randn(points_per_half, 1);
@@ -76,7 +76,7 @@ second_half(1) = first_half(end);
 
 day2_data = [first_half; second_half];
 
-%% 3. Sheet3: 第3天 - 前半天正常 + 后半天小幅度负向偏移（逐渐偏移）
+%% 3. 小幅度负向偏移 - 前半天正常 + 后半天小幅度负向偏移（逐渐偏移）
 fprintf('[4/10] 正在生成小幅度负向偏移数据：前半天正常 + 后半天偏移...\n');
 first_half = normal_mean + normal_std * randn(points_per_half, 1);
 first_half = max(range_min, min(range_max, first_half));
@@ -90,7 +90,7 @@ second_half = max(range_min, min(range_max, second_half));
 second_half(1) = first_half(end);
 day3_data = [first_half; second_half];
 
-%% 4. Sheet4: 第4天 - 前半天正常 + 后半天大幅度正向偏移（逐渐偏移）
+%% 4. 大幅度正向偏移 - 前半天正常 + 后半天大幅度正向偏移（逐渐偏移）
 fprintf('[5/10] 正在生成大幅度正向偏移数据：前半天正常 + 后半天偏移...\n');
 first_half = normal_mean + normal_std * randn(points_per_half, 1);
 first_half = max(range_min, min(range_max, first_half));
@@ -104,7 +104,7 @@ second_half = max(range_min, min(range_max, second_half));
 second_half(1) = first_half(end);
 day4_data = [first_half; second_half];
 
-%% 5. Sheet5: 第5天 - 前半天正常 + 后半天大幅度负向偏移（逐渐偏移）
+%% 5. 大幅度负向偏移 - 前半天正常 + 后半天大幅度负向偏移（逐渐偏移）
 fprintf('[6/10] 正在生成大幅度负向偏移数据：前半天正常 + 后半天偏移...\n');
 first_half = normal_mean + normal_std * randn(points_per_half, 1);
 first_half = max(range_min, min(range_max, first_half));
@@ -118,7 +118,7 @@ second_half = max(range_min, min(range_max, second_half));
 second_half(1) = first_half(end);
 day5_data = [first_half; second_half];
 
-%% 6. Sheet6: 第6天 - 前半天正常 + 后半天剧烈波动（连续）
+%% 6. 剧烈波动异常 - 前半天正常 + 后半天剧烈波动（连续）
 fprintf('[7/10] 正在生成剧烈波动异常数据：前半天正常 + 后半天波动...\n');
 first_half = normal_mean + normal_std * randn(points_per_half, 1);
 first_half = max(range_min, min(range_max, first_half));
@@ -129,7 +129,7 @@ second_half = max(range_min, min(range_max, second_half));
 second_half(1) = first_half(end);
 day6_data = [first_half; second_half];
 
-%% 7. Sheet7: 第7天 - 前半天正常 + 后半天满量程输出（不连续）
+%% 7. 满量程输出异常 - 前半天正常 + 后半天满量程输出（不连续）
 fprintf('[8/10] 正在生成满量程输出异常数据：前半天正常 + 后半天满量程...\n');
 first_half = normal_mean + normal_std * randn(points_per_half, 1);
 first_half = max(range_min, min(range_max, first_half));
@@ -138,7 +138,7 @@ second_half = ones(points_per_half, 1) * range_max;  % 恒定10%
 
 day7_data = [first_half; second_half];
 
-%% 8. Sheet8: 第8天 - 前半天正常 + 后半天零位输出（不连续）
+%% 8. 零位输出异常 - 前半天正常 + 后半天零位输出（不连续）
 fprintf('[9/10] 正在生成零位输出异常数据：前半天正常 + 后半天零位...\n');
 first_half = normal_mean + normal_std * randn(points_per_half, 1);
 first_half = max(range_min, min(range_max, first_half));
@@ -147,7 +147,7 @@ second_half = zeros(points_per_half, 1);  % 恒定0%
 
 day8_data = [first_half; second_half];
 
-%% 9. Sheet9: 第9天 - 前半天正常 + 后半天信号丢失（不连续）
+%% 9. 信号丢失异常 - 前半天正常 + 后半天信号丢失（不连续）
 fprintf('[10/10] 正在生成信号丢失异常数据：前半天正常 + 后半天信号丢失...\n');
 first_half = normal_mean + normal_std * randn(points_per_half, 1);
 first_half = max(range_min, min(range_max, first_half));
@@ -160,7 +160,7 @@ fprintf('\n所有数据类型生成完成！\n\n');
 
 %% 三、创建Excel文件并写入数据
 
-filename = 'Magnos206_SimulationData_with_hold.xlsx';
+filename = 'Magnos206_SimulationData_Optimized.xlsx';
 
 sheet_names = {'数据保持', ...
                '全天正常', ...
