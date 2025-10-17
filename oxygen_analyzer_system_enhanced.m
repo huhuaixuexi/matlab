@@ -262,13 +262,9 @@ if config.enable_visualization
      ax1.GridColor = [0.8 0.8 0.8];
      ax1.MinorGridColor = [0.9 0.9 0.9];
      
-     % 设置初始时间轴范围 - 使用datenum转换为数值
-     initial_time = config.start_time;
-     xlim(ax1, [datenum(initial_time), datenum(initial_time + hours(1))]);
+     % 设置初始时间轴范围 - 使用简单的数值范围
+     xlim(ax1, [0, 3600]);  % 初始显示1小时（3600秒）
      ylim([-0.5, 10.5]);
-     
-     % 设置时间轴格式
-     datetick(ax1, 'x', 'HH:MM', 'keepticks');
      
      % === 右侧数据窗口 ===
      buffer_panel = uipanel('Parent', main_panel, ...
@@ -499,51 +495,61 @@ for i = 1:total_samples
          window_start = max(1, i - window_size + 1);
          window_data = oxygen_values(window_start:i);
          
-         % 计算对应的实际时间并转换为数值
+         % 计算对应的实际时间
          window_datetime = config.start_time + seconds((window_start-1:i-1) * config.sample_interval);
          current_datetime = config.start_time + seconds((i-1) * config.sample_interval);
          
-         % 转换为datenum格式用于绘图
-         window_datenum = datenum(window_datetime);
-         current_datenum = datenum(current_datetime);
+         % 使用相对时间（秒）作为X轴数据，但保存实际时间用于标签
+         window_time_seconds = (window_start-1:i-1) * config.sample_interval;
+         current_time_seconds = (i-1) * config.sample_interval;
          
-         set(h_line, 'XData', window_datenum, 'YData', window_data);
-         set(h_current, 'XData', current_datenum, 'YData', window_data(end));
+         set(h_line, 'XData', window_time_seconds, 'YData', window_data);
+         set(h_current, 'XData', current_time_seconds, 'YData', window_data(end));
          
-         % 更新异常点 - 使用实际时间
-         if ~isempty(alarm_datetime)
+         % 更新异常点 - 使用相对时间
+         if ~isempty(alarm_times)
              % 只显示当前窗口范围内的报警点
-             recent_mask = alarm_datetime >= window_datetime(1) & alarm_datetime <= window_datetime(end);
+             recent_mask = alarm_times >= window_time_seconds(1) & alarm_times <= window_time_seconds(end);
              if any(recent_mask)
-                 % 转换报警时间为datenum格式
-                 alarm_datenum = datenum(alarm_datetime(recent_mask));
-                 set(h_alarm_points, 'XData', alarm_datenum, ...
+                 set(h_alarm_points, 'XData', alarm_times(recent_mask), ...
                                    'YData', alarm_values(recent_mask));
              else
                  set(h_alarm_points, 'XData', NaN, 'YData', NaN);
              end
          end
          
-         % 设置X轴范围 - 显示最近1小时，转换为datenum
-         xlim(ax1, [datenum(window_datetime(1)), datenum(window_datetime(end) + minutes(5))]);
+         % 设置X轴范围 - 显示最近1小时
+         xlim(ax1, [window_time_seconds(1), window_time_seconds(end) + 300]);  % 加5分钟缓冲
          
-         % 设置时间轴刻度 - 每小时一个主刻度
-         time_range = window_datetime(end) - window_datetime(1);
-         if time_range <= hours(1)
-             % 小于等于1小时：每15分钟一个刻度
-             tick_times = window_datetime(1):minutes(15):window_datetime(end);
-             xticks(ax1, datenum(tick_times));
-             datetick(ax1, 'x', 'HH:MM', 'keepticks');
-         elseif time_range <= hours(6)
-             % 1-6小时：每30分钟一个刻度
-             tick_times = window_datetime(1):minutes(30):window_datetime(end);
-             xticks(ax1, datenum(tick_times));
-             datetick(ax1, 'x', 'HH:MM', 'keepticks');
+         % 设置时间轴刻度和标签 - 显示实际时间
+         time_range_seconds = window_time_seconds(end) - window_time_seconds(1);
+         
+         if time_range_seconds <= 3600  % 小于等于1小时
+             % 每15分钟一个刻度
+             tick_interval = 900;  % 15分钟 = 900秒
+         elseif time_range_seconds <= 21600  % 1-6小时
+             % 每30分钟一个刻度
+             tick_interval = 1800;  % 30分钟 = 1800秒
          else
-             % 超过6小时：每小时一个刻度
-             tick_times = window_datetime(1):hours(1):window_datetime(end);
-             xticks(ax1, datenum(tick_times));
-             datetick(ax1, 'x', 'HH:MM', 'keepticks');
+             % 每小时一个刻度
+             tick_interval = 3600;  % 1小时 = 3600秒
+         end
+         
+         % 计算刻度位置
+         tick_start = ceil(window_time_seconds(1) / tick_interval) * tick_interval;
+         tick_positions = tick_start:tick_interval:window_time_seconds(end);
+         
+         if ~isempty(tick_positions)
+             % 计算对应的时间标签
+             tick_labels = cell(1, length(tick_positions));
+             for k = 1:length(tick_positions)
+                 tick_time = config.start_time + seconds(tick_positions(k));
+                 tick_labels{k} = datestr(tick_time, 'HH:MM');
+             end
+             
+             % 设置刻度和标签
+             xticks(ax1, tick_positions);
+             xticklabels(ax1, tick_labels);
          end
          
          % 更新1小时窗口
