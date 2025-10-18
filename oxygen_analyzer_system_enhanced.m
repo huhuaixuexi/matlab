@@ -1970,7 +1970,11 @@ function update_maintenance_table(fig_handle, fault_code, fault_time, maintenanc
             };
             
             % 添加到表格数据中
-            table_data{end+1, :} = new_row;
+            if isempty(table_data)
+                table_data = new_row;
+            else
+                table_data(end+1, :) = new_row;
+            end
         end
     end
     
