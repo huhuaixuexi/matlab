@@ -442,9 +442,9 @@ if config.enable_visualization
          end
      end
      
-     % === 底部维修建议区域 ===
+     % === 左侧维修建议区域 ===
      maint_panel = uipanel('Parent', main_panel, ...
-                          'Position', [0.01 0.01 0.65 0.24], ...
+                          'Position', [0.01 0.01 0.49 0.24], ...
                           'BackgroundColor', colors.light, ...
                           'Title', '维修建议', ...
                           'TitlePosition', 'centertop', ...
@@ -489,99 +489,69 @@ if config.enable_visualization
          end
      end
      
-     % === 右侧维护操作输入区域 ===
-     input_panel = uipanel('Parent', main_panel, ...
-                          'Position', [0.67 0.01 0.32 0.24], ...
-                          'BackgroundColor', colors.light, ...
-                          'Title', '维护操作记录', ...
-                          'TitlePosition', 'centertop', ...
-                          'FontSize', 12, ...
-                          'FontWeight', 'bold', ...
-                          'FontName', 'Microsoft YaHei', ...
-                          'ForegroundColor', colors.primary);
+     % === 右侧维护操作记录区域 ===
+     record_panel = uipanel('Parent', main_panel, ...
+                           'Position', [0.51 0.01 0.48 0.24], ...
+                           'BackgroundColor', colors.light, ...
+                           'Title', '维护操作记录', ...
+                           'TitlePosition', 'centertop', ...
+                           'FontSize', 12, ...
+                           'FontWeight', 'bold', ...
+                           'FontName', 'Microsoft YaHei', ...
+                           'ForegroundColor', colors.primary);
      
      % 确保面板标题字体正确设置
      try
-         set(input_panel, 'FontName', 'Microsoft YaHei');
+         set(record_panel, 'FontName', 'Microsoft YaHei');
      catch
          try
-             set(input_panel, 'FontName', 'SimHei');
+             set(record_panel, 'FontName', 'SimHei');
          catch
-             set(input_panel, 'FontName', 'default');
+             set(record_panel, 'FontName', 'default');
          end
      end
      
-     % 操作员姓名输入
-     uicontrol('Parent', input_panel, ...
-              'Style', 'text', ...
-              'String', '操作员:', ...
-              'Position', [10 input_panel.Position(4)*figHeight-40 60 20], ...
-              'BackgroundColor', colors.light, ...
-              'FontName', 'Microsoft YaHei', ...
-              'HorizontalAlignment', 'left');
+     % 创建表格显示维护记录
+     % 定义表格列名
+     column_names = {'数据故障代码', '故障时间', '仪表故障代码', '故障描述/名称', ...
+                    '故障类型', '严重程度', '优先级', '维修操作', '耗时', '工具'};
      
-     h_operator_name = uicontrol('Parent', input_panel, ...
-                                'Style', 'edit', ...
-                                'Position', [75 input_panel.Position(4)*figHeight-40 100 20], ...
-                                'BackgroundColor', colors.light, ...
-                                'FontName', 'Microsoft YaHei');
+     % 初始化空数据
+     empty_data = cell(1, 10);
+     for i = 1:10
+         empty_data{i} = '等待维护记录...';
+     end
      
-     % 实际执行操作输入
-     uicontrol('Parent', input_panel, ...
-              'Style', 'text', ...
-              'String', '实际操作:', ...
-              'Position', [10 input_panel.Position(4)*figHeight-70 70 20], ...
-              'BackgroundColor', colors.light, ...
-              'FontName', 'Microsoft YaHei', ...
-              'HorizontalAlignment', 'left');
+     % 创建表格
+     h_maintenance_table = uitable('Parent', record_panel, ...
+                                  'Position', [5 5 record_panel.Position(3)*figWidth-10 record_panel.Position(4)*figHeight-35], ...
+                                  'Data', empty_data, ...
+                                  'ColumnName', column_names, ...
+                                  'ColumnWidth', {80, 120, 80, 120, 100, 80, 60, 150, 80, 100}, ...
+                                  'FontSize', 8, ...
+                                  'FontName', 'Microsoft YaHei', ...
+                                  'BackgroundColor', colors.light, ...
+                                  'ForegroundColor', colors.dark, ...
+                                  'RowStriping', 'on', ...
+                                  'Enable', 'on');
      
-     h_actual_action = uicontrol('Parent', input_panel, ...
-                                'Style', 'edit', ...
-                                'Position', [10 input_panel.Position(4)*figHeight-120 input_panel.Position(3)*figWidth-30 45], ...
-                                'BackgroundColor', colors.light, ...
-                                'FontName', 'Microsoft YaHei', ...
-                                'Max', 3, ...
-                                'Min', 1);
+     % 确保表格字体正确设置
+     try
+         set(h_maintenance_table, 'FontName', 'Microsoft YaHei');
+     catch
+         try
+             set(h_maintenance_table, 'FontName', 'SimHei');
+         catch
+             set(h_maintenance_table, 'FontName', 'default');
+         end
+     end
      
-     % 实际耗时输入
-     uicontrol('Parent', input_panel, ...
-              'Style', 'text', ...
-              'String', '实际耗时:', ...
-              'Position', [10 input_panel.Position(4)*figHeight-150 70 20], ...
-              'BackgroundColor', colors.light, ...
-              'FontName', 'Microsoft YaHei', ...
-              'HorizontalAlignment', 'left');
+     % 初始化维护记录结构（用于表格显示）
+     maintenance_table_data = {};
      
-     h_actual_time = uicontrol('Parent', input_panel, ...
-                              'Style', 'edit', ...
-                              'Position', [85 input_panel.Position(4)*figHeight-150 90 20], ...
-                              'BackgroundColor', colors.light, ...
-                              'FontName', 'Microsoft YaHei');
-     
-     % 记录按钮
-     h_record_btn = uicontrol('Parent', input_panel, ...
-                             'Style', 'pushbutton', ...
-                             'String', '记录维护操作', ...
-                             'Position', [10 10 input_panel.Position(3)*figWidth-20 30], ...
-                             'BackgroundColor', colors.success, ...
-                             'ForegroundColor', colors.light, ...
-                             'FontName', 'Microsoft YaHei', ...
-                             'FontSize', 10, ...
-                             'FontWeight', 'bold', ...
-                             'Callback', @(src,evt) record_maintenance_callback(h_operator_name, h_actual_action, h_actual_time, fig));
-     
-     % 初始化实际维护记录结构
-     actual_maintenance_records = struct();
-     actual_maintenance_records.operator_name = {};
-     actual_maintenance_records.fault_code = {};
-     actual_maintenance_records.fault_time = {};
-     actual_maintenance_records.actual_action = {};
-     actual_maintenance_records.actual_time = {};
-     actual_maintenance_records.record_time = {};
-     actual_maintenance_records.count = 0;
-     
-     % 将记录结构保存到应用数据中，以便回调函数访问
-     setappdata(fig, 'actual_maintenance_records', actual_maintenance_records);
+     % 将表格句柄保存到应用数据中
+     setappdata(fig, 'maintenance_table_handle', h_maintenance_table);
+     setappdata(fig, 'maintenance_table_data', maintenance_table_data);
      
      % 创建进度条
      progress_panel = uipanel('Parent', main_panel, ...
@@ -668,6 +638,11 @@ for i = 1:total_samples
                  
                  % 记录维护措施到记录层
                  record_maintenance_measures(maintenance_records, fault_code, current_time, maintenance_advice);
+                 
+                 % 更新维护记录表格显示
+                 if config.enable_visualization
+                     update_maintenance_table(fig, fault_code, current_time, maintenance_advice);
+                 end
              end
          end
      end
@@ -708,6 +683,11 @@ for i = 1:total_samples
              
              % 记录维护措施到记录层
              record_maintenance_measures(maintenance_records, fault_code, current_time, maintenance_advice);
+             
+             % 更新维护记录表格显示
+             if config.enable_visualization
+                 update_maintenance_table(fig, fault_code, current_time, maintenance_advice);
+             end
          end
          
          fprintf('\n');
@@ -1043,43 +1023,13 @@ if config.save_log
         fprintf('报警数据已保存至: %s\n', excel_file);
     end
     
-    % 从应用数据中获取实际维护记录
-    if config.enable_visualization
-        actual_maintenance_records = getappdata(fig, 'actual_maintenance_records');
-    else
-        actual_maintenance_records = struct('count', 0);
-    end
-    
     % 保存维护记录到Excel
-    if maintenance_records.count > 0 || actual_maintenance_records.count > 0
-        % 创建建议维护记录表
-        if maintenance_records.count > 0
-            suggested_table = create_maintenance_table(maintenance_records);
-        else
-            suggested_table = table();
-        end
-        
-        % 创建实际维护记录表
-        if actual_maintenance_records.count > 0
-            actual_table = create_actual_maintenance_table(actual_maintenance_records);
-        else
-            actual_table = table();
-        end
-        
-        % 保存到Excel文件的不同工作表
+    if maintenance_records.count > 0
+        maintenance_table = create_maintenance_table(maintenance_records);
         maintenance_excel_file = sprintf('故障诊断维修记录_%s.xlsx', datestr(now, 'yyyymmdd'));
-        
-        if ~isempty(suggested_table)
-            writetable(suggested_table, maintenance_excel_file, 'Sheet', '建议维护记录');
-            fprintf('建议维护记录已保存至: %s (工作表: 建议维护记录)\n', maintenance_excel_file);
-            fprintf('建议维护记录总数: %d 条\n', maintenance_records.count);
-        end
-        
-        if ~isempty(actual_table)
-            writetable(actual_table, maintenance_excel_file, 'Sheet', '实际维护记录');
-            fprintf('实际维护记录已保存至: %s (工作表: 实际维护记录)\n', maintenance_excel_file);
-            fprintf('实际维护记录总数: %d 条\n', actual_maintenance_records.count);
-        end
+        writetable(maintenance_table, maintenance_excel_file);
+        fprintf('维护记录已保存至: %s\n', maintenance_excel_file);
+        fprintf('维护记录总数: %d 条\n', maintenance_records.count);
     else
         fprintf('本次监控期间无维护记录生成\n');
     end
@@ -1969,82 +1919,78 @@ function fault_type_name = get_fault_type_name(fault_code)
     end
 end
 
-% 创建实际维护记录表格函数
-function actual_table = create_actual_maintenance_table(actual_records)
-    if actual_records.count == 0
-        actual_table = table();
-        return;
-    end
-    
-    % 创建表格数据
-    actual_table = table(...
-        actual_records.operator_name', ...
-        actual_records.fault_time', ...
-        actual_records.actual_action', ...
-        actual_records.actual_time', ...
-        actual_records.record_time', ...
-        'VariableNames', {...
-            'OperatorName', ...
-            'FaultTime', ...
-            'ActualAction', ...
-            'ActualTime', ...
-            'RecordTime'});
-    
-    % 设置中文列名（如果支持的话）
-    try
-        actual_table.Properties.VariableNames = {...
-            '操作员姓名', ...
-            '故障时间', ...
-            '实际执行操作', ...
-            '实际耗时', ...
-            '记录时间'};
-    catch
-        % 如果中文列名不支持，保持英文列名
-        fprintf('警告：系统不支持中文列名，使用英文列名\n');
-    end
-end
 
-% 记录实际维护操作回调函数
-function record_maintenance_callback(h_operator, h_action, h_time, fig_handle)
-    % 从应用数据中获取记录结构
-    records = getappdata(fig_handle, 'actual_maintenance_records');
+% 更新维护记录表格显示函数
+function update_maintenance_table(fig_handle, fault_code, fault_time, maintenance_advice)
+    % 获取表格句柄和数据
+    table_handle = getappdata(fig_handle, 'maintenance_table_handle');
+    table_data = getappdata(fig_handle, 'maintenance_table_data');
     
-    % 获取输入的信息
-    operator_name = get(h_operator, 'String');
-    actual_action = get(h_action, 'String');
-    actual_time = get(h_time, 'String');
+    if isempty(table_data)
+        table_data = {};
+    end
     
-    % 验证输入
-    if isempty(strtrim(operator_name)) || isempty(strtrim(actual_action)) || isempty(strtrim(actual_time))
-        msgbox('请填写完整的维护操作信息', '输入错误', 'error');
+    % 检查是否有维修建议
+    if ~isfield(maintenance_advice, 'all_suggestions') || isempty(maintenance_advice.all_suggestions)
         return;
     end
     
-    % 记录到实际维护记录中
-    records.count = records.count + 1;
-    idx = records.count;
+    % 遍历所有维修建议
+    for i = 1:length(maintenance_advice.all_suggestions)
+        suggestion = maintenance_advice.all_suggestions{i};
+        
+        % 遍历每个建议的所有维修措施
+        if iscell(suggestion.measures)
+            measures = suggestion.measures;
+        elseif isstruct(suggestion.measures)
+            measures = num2cell(suggestion.measures);
+        else
+            continue;
+        end
+        
+        for j = 1:length(measures)
+            if iscell(measures)
+                measure = measures{j};
+            else
+                measure = measures(j);
+            end
+            
+            % 创建新的表格行数据
+            new_row = {
+                fault_code, ...                           % 数据故障代码
+                datestr(fault_time, 'yyyy-mm-dd HH:MM:SS'), ... % 故障时间
+                suggestion.fault_code, ...                % 仪表故障代码
+                suggestion.fault_name, ...                % 故障描述/名称
+                get_fault_type_name(fault_code), ...      % 故障类型
+                suggestion.severity, ...                  % 严重程度
+                num2str(suggestion.priority), ...         % 优先级
+                measure.action, ...                       % 维修操作
+                measure.time, ...                         % 耗时
+                measure.tools                             % 工具
+            };
+            
+            % 添加到表格数据中
+            table_data{end+1, :} = new_row;
+        end
+    end
     
-    records.operator_name{idx} = strtrim(operator_name);
-    records.fault_time{idx} = datestr(now, 'yyyy-mm-dd HH:MM:SS');
-    records.actual_action{idx} = strtrim(actual_action);
-    records.actual_time{idx} = strtrim(actual_time);
-    records.record_time{idx} = datestr(now, 'yyyy-mm-dd HH:MM:SS');
+    % 更新表格显示
+    if ~isempty(table_data)
+        % 转换为正确的格式
+        display_data = cell(size(table_data, 1), 10);
+        for row = 1:size(table_data, 1)
+            for col = 1:10
+                if iscell(table_data{row})
+                    display_data{row, col} = table_data{row}{col};
+                else
+                    display_data{row, col} = table_data{row, col};
+                end
+            end
+        end
+        
+        set(table_handle, 'Data', display_data);
+    end
     
-    % 将更新后的记录保存回应用数据
-    setappdata(fig_handle, 'actual_maintenance_records', records);
-    
-    % 清空输入框
-    set(h_action, 'String', '');
-    set(h_time, 'String', '');
-    
-    % 显示确认消息
-    msgbox(sprintf('维护操作已记录！\n操作员: %s\n操作: %s\n耗时: %s', ...
-           operator_name, actual_action, actual_time), '记录成功', 'help');
-    
-    % 在命令窗口显示记录信息
-    fprintf('\n【维护操作记录】\n');
-    fprintf('操作员: %s\n', operator_name);
-    fprintf('操作内容: %s\n', actual_action);
-    fprintf('实际耗时: %s\n', actual_time);
-    fprintf('记录时间: %s\n\n', datestr(now, 'yyyy-mm-dd HH:MM:SS'));
+    % 保存更新后的数据
+    setappdata(fig_handle, 'maintenance_table_data', table_data);
 end      
