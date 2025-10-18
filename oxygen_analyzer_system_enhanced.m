@@ -168,6 +168,20 @@ log_entries = {};
 alarm_log = {};
 maintenance_log = {};
 
+% 初始化维护记录数据结构
+maintenance_records = struct();
+maintenance_records.data_fault_code = {};      % 数据故障代码
+maintenance_records.fault_time = {};           % 故障时间
+maintenance_records.instrument_fault_code = {};% 仪表故障代码
+maintenance_records.fault_description = {};    % 故障描述/名称
+maintenance_records.fault_type = {};           % 故障类型
+maintenance_records.severity = {};             % 严重程度
+maintenance_records.priority = {};             % 优先级
+maintenance_records.maintenance_action = {};   % 维修操作
+maintenance_records.time_cost = {};            % 耗时
+maintenance_records.tools = {};                % 工具
+maintenance_records.count = 0;                 % 记录总数
+
 % 初始化数据保持检测变量
 data_hold_detector = struct();
 data_hold_detector.last_value = NaN;
@@ -557,6 +571,9 @@ for i = 1:total_samples
                  fprintf('%s\n', advice_text);
                  maintenance_log{end+1} = [alarm_msg advice_text];
                  current_maintenance_advice = maintenance_advice;
+                 
+                 % 记录维护措施到记录层
+                 record_maintenance_measures(maintenance_records, fault_code, current_time, maintenance_advice);
              end
          end
      end
@@ -594,6 +611,9 @@ for i = 1:total_samples
              fprintf('%s\n', advice_text);
              maintenance_log{end+1} = [diagnosis_msg advice_text];
              current_maintenance_advice = maintenance_advice;
+             
+             % 记录维护措施到记录层
+             record_maintenance_measures(maintenance_records, fault_code, current_time, maintenance_advice);
          end
          
          fprintf('\n');
@@ -927,6 +947,17 @@ if config.save_log
         excel_file = sprintf('O2_Alarms_%s.xlsx', datestr(now, 'yyyymmdd_HHMMSS'));
         writetable(alarm_table, excel_file);
         fprintf('报警数据已保存至: %s\n', excel_file);
+    end
+    
+    % 保存维护记录到Excel
+    if maintenance_records.count > 0
+        maintenance_table = create_maintenance_table(maintenance_records);
+        maintenance_excel_file = sprintf('故障诊断维修记录_%s.xlsx', datestr(now, 'yyyymmdd'));
+        writetable(maintenance_table, maintenance_excel_file);
+        fprintf('维护记录已保存至: %s\n', maintenance_excel_file);
+        fprintf('维护记录总数: %d 条\n', maintenance_records.count);
+    else
+        fprintf('本次监控期间无维护记录生成\n');
     end
     
     % 保存图形（可选）
@@ -1683,5 +1714,103 @@ function set_global_font()
         catch
             warning('字符编码设置失败');
         end
+    end
+end
+
+%% ========================================
+%% 维护记录函数
+%% ========================================
+
+% 记录维护措施函数
+function record_maintenance_measures(maintenance_records, data_fault_code, fault_time, maintenance_advice)
+    if ~isfield(maintenance_advice, 'all_suggestions') || isempty(maintenance_advice.all_suggestions)
+        return;
+    end
+    
+    % 遍历所有维修建议
+    for i = 1:length(maintenance_advice.all_suggestions)
+        suggestion = maintenance_advice.all_suggestions{i};
+        
+        % 遍历每个建议的所有维修措施
+        if iscell(suggestion.measures)
+            measures = suggestion.measures;
+        elseif isstruct(suggestion.measures)
+            measures = num2cell(suggestion.measures);
+        else
+            continue;
+        end
+        
+        for j = 1:length(measures)
+            if iscell(measures)
+                measure = measures{j};
+            else
+                measure = measures(j);
+            end
+            
+            % 增加记录计数
+            maintenance_records.count = maintenance_records.count + 1;
+            idx = maintenance_records.count;
+            
+            % 记录各项信息
+            maintenance_records.data_fault_code{idx} = data_fault_code;
+            maintenance_records.fault_time{idx} = datestr(fault_time, 'yyyy-mm-dd HH:MM:SS');
+            maintenance_records.instrument_fault_code{idx} = suggestion.fault_code;
+            maintenance_records.fault_description{idx} = suggestion.fault_name;
+            maintenance_records.fault_type{idx} = get_fault_type_name(data_fault_code);
+            maintenance_records.severity{idx} = suggestion.severity;
+            maintenance_records.priority{idx} = suggestion.priority;
+            maintenance_records.maintenance_action{idx} = measure.action;
+            maintenance_records.time_cost{idx} = measure.time;
+            maintenance_records.tools{idx} = measure.tools;
+        end
+    end
+end
+
+% 创建维护记录表格函数
+function maintenance_table = create_maintenance_table(maintenance_records)
+    if maintenance_records.count == 0
+        maintenance_table = table();
+        return;
+    end
+    
+    % 创建表格
+    maintenance_table = table();
+    maintenance_table.数据故障代码 = maintenance_records.data_fault_code';
+    maintenance_table.故障时间 = maintenance_records.fault_time';
+    maintenance_table.仪表故障代码 = maintenance_records.instrument_fault_code';
+    maintenance_table.故障描述名称 = maintenance_records.fault_description';
+    maintenance_table.故障类型 = maintenance_records.fault_type';
+    maintenance_records_severity = maintenance_records.severity';
+    maintenance_table.严重程度 = maintenance_records_severity;
+    
+    % 处理优先级数据
+    priority_cell = cell(length(maintenance_records.priority), 1);
+    for i = 1:length(maintenance_records.priority)
+        priority_cell{i} = num2str(maintenance_records.priority{i});
+    end
+    maintenance_table.优先级 = priority_cell;
+    
+    maintenance_table.维修操作 = maintenance_records.maintenance_action';
+    maintenance_table.耗时 = maintenance_records.time_cost';
+    maintenance_table.工具 = maintenance_records.tools';
+end
+
+% 获取故障类型名称函数
+function fault_type_name = get_fault_type_name(fault_code)
+    switch fault_code
+        case '001'
+            fault_type_name = '数据保持型故障';
+        case '002'
+            fault_type_name = '数据保持型故障';
+        case '003'
+            fault_type_name = '数据传输中断型故障';
+        case '004'
+            fault_type_name = '数据保持型故障';
+        case '005'
+            fault_type_name = '数据波动型故障';
+        case {'006.01', '006.02', '006.03', '006.04', '006.05', '006.06'}
+            fault_type_name = '数据偏差型故障';
+        otherwise
+            fault_type_name = '未知故障类型';
     end
 end      
