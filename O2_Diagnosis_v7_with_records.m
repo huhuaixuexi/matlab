@@ -1506,36 +1506,25 @@ function export_records_to_excel(fig, filename)
         return;
     end
     
-    % 转换为table
+    % 使用 writecell 输出，避免中文变量名作为标识符
+    header = {'数据','故障代码','故障时间','仪表故障代码','故障描述/名称','故障类型','严重程度','优先级','维修操作','耗时','工具'};
     n = numel(state.saved);
-    数据 = nan(n,1); %#ok<NASGU>
-    故障代码 = strings(n,1); %#ok<NASGU>
-    故障时间 = strings(n,1); %#ok<NASGU>
-    仪表故障代码 = strings(n,1); %#ok<NASGU>
-    故障描述_名称 = strings(n,1); %#ok<NASGU>
-    故障类型 = strings(n,1); %#ok<NASGU>
-    严重程度 = strings(n,1); %#ok<NASGU>
-    优先级 = nan(n,1); %#ok<NASGU>
-    维修操作 = strings(n,1); %#ok<NASGU>
-    耗时 = strings(n,1); %#ok<NASGU>
-    工具 = strings(n,1); %#ok<NASGU>
-    
+    rows = cell(n, numel(header));
     for i = 1:n
         r = state.saved(i);
-        数据(i,1) = r.data_value;
-        故障代码(i,1) = string(r.data_fault_code);
-        故障时间(i,1) = string(datestr(r.fault_time,'yyyy-mm-dd HH:MM:SS'));
-        仪表故障代码(i,1) = string(r.instr_fault_code);
-        故障描述_名称(i,1) = string(r.instr_fault_name);
-        故障类型(i,1) = string(r.fault_type);
-        严重程度(i,1) = string(r.severity);
-        优先级(i,1) = r.priority;
-        维修操作(i,1) = string(r.action);
-        耗时(i,1) = string(r.duration);
-        工具(i,1) = string(r.tools);
+        rows{i,1}  = r.data_value;
+        rows{i,2}  = r.data_fault_code;
+        rows{i,3}  = datestr(r.fault_time,'yyyy-mm-dd HH:MM:SS');
+        rows{i,4}  = r.instr_fault_code;
+        rows{i,5}  = r.instr_fault_name;
+        rows{i,6}  = r.fault_type;
+        rows{i,7}  = r.severity;
+        rows{i,8}  = r.priority;
+        rows{i,9}  = r.action;
+        rows{i,10} = r.duration;
+        rows{i,11} = r.tools;
     end
-    T = table(数据, 故障代码, 故障时间, 仪表故障代码, 故障描述_名称, 故障类型, 严重程度, 优先级, 维修操作, 耗时, 工具);
-    writetable(T, filename);
+    writecell([header; rows], filename);
     fprintf('维护记录已导出至: %s\n', filename);
 end
 
